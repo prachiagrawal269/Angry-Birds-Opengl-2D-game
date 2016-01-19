@@ -163,4 +163,28 @@ VAO* createArrow ()
 
 }
 
+VAO* createGround ()
+{
+  GLfloat* vertex_buffer_data = new GLfloat [3*4];
+  GLfloat* color_buffer_data = new GLfloat [3*4];
+ 
+      vertex_buffer_data [0] = -12 ;
+      vertex_buffer_data [1] = 0;
+      vertex_buffer_data [2] = 0;
+
+      vertex_buffer_data [3] = 12 ;
+      vertex_buffer_data [4] = 0;
+      vertex_buffer_data [5] = 0;
+
+      color_buffer_data [0] = 0;
+      color_buffer_data [1] = 1;
+      color_buffer_data [2] = 0;
+      color_buffer_data [3] = 0;
+      color_buffer_data [4] = 1;
+      color_buffer_data [5] = 0;
+
+   return create3DObject(GL_LINES, 2, vertex_buffer_data, color_buffer_data, GL_LINE);
+
+}
+
 };

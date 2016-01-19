@@ -24,6 +24,10 @@ float rectangle_cx = -9;
 float rectangle_cy = -9;
 
 float ball_velocity = 1;
+float threshold_velocity = 0.25;
 double ball_Inittime = 0;
 bool ball_move_flag = 0;
-float gravity = 0.5;
+float gravity = 4;
+float airdragConstant = 0.3;
+
+/* all bodies have same mass of 1 unit*/

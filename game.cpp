@@ -5,14 +5,55 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+//#include "globals.h"
 #include "board.cpp"
-#include "globals.cpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 using namespace std;
+
+#define GLM_FORCE_RADIANS
+#define DEG2RAD(deg) (deg * PI / 180)
+#define PI 3.141592653589
+
+// globals variables
+float friction = 0;
+float triangle_rot_dir = 1;
+float rectangle_rot_dir = 1;
+bool triangle_rot_status = true;
+bool rectangle_rot_status = true;
+float canon_shift_dist_x = 0;
+float canon_shift_dist_y = 0;
+float ball_shift_dist_x = 0;
+float ball_shift_dist_y = 0;
+float friction_dist = 0;
+float velocityFriction = 0;
+float friction_init_time = 0;
+
+float camera_rotation_angle = 90;
+float rectangle_rotation = 0;
+float triangle_rotation = 0;
+float arrow_rotation = 45;
+
+float ball_radius = 0.5;
+float ball_cx = -9;
+float ball_cy = -7.5;
+float rectangle_cx = -9;
+float rectangle_cy = -9;
+
+float ball_velocity = 1;
+float threshold_velocity = 0.25;
+double ball_Inittime = 0;
+bool ball_move_flag = 0;
+float gravity = 2;
+float airdragConstant = 0.09;
+float frictionCoefficient = 0.3;
+
+
+float vt = gravity/airdragConstant ;
+float vox, voy, vx, vy;
 
 struct VAO {
     GLuint VertexArrayID;
@@ -184,6 +225,8 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
             case GLFW_KEY_SPACE:
               if(ball_move_flag==0)
               {
+                  vox = ball_velocity*cos(DEG2RAD(arrow_rotation));
+                  voy = ball_velocity*sin(DEG2RAD(arrow_rotation));
                   ball_move_flag = 1;
                   ball_Inittime = glfwGetTime();
               }
@@ -261,7 +304,7 @@ void reshapeWindow (GLFWwindow* window, int width, int height)
     Matrices.projection = glm::ortho(-12.0f, 12.0f, -12.0f, 12.0f, 0.1f, 500.0f);
 }
 
-board::VAO *triangle, *rectangle, *circle, *arrow;
+board::VAO *triangle, *rectangle, *circle, *arrow, *ground;
 
 /* Render the scene with openGL */
 /* Edit this function according to your assignment */
@@ -311,7 +354,7 @@ void drawCircle ()
   /* forming circle */
   Matrices.model = glm::mat4(1.0f);
 
-  glm::mat4 translateCircle = glm::translate (glm::vec3(ball_cx + ball_shift_dist_x, ball_cy + ball_shift_dist_y, 0));        // glTranslatef
+  glm::mat4 translateCircle = glm::translate (glm::vec3(rectangle_cx +  canon_shift_dist_x + ball_shift_dist_x + friction_dist, ball_cy + ball_shift_dist_y, 0));        // glTranslatef
  // glm::mat4 rotateRectangle = glm::rotate((float)(arrow_rotation*M_PI/180.0f), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
   Matrices.model *= (translateCircle); 
   MVP = VP * Matrices.model;
@@ -345,6 +388,33 @@ void drawArrow ()
 
   // draw3DObject draws the VAO given to it using current MVP matrix */
   draw3DObject(arrow);
+
+}
+
+void drawGround ()
+{
+
+  Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); // Fixed camera for 2D (ortho) in XY plane
+  glm::mat4 VP = Matrices.projection * Matrices.view;
+  glm::mat4 MVP;
+
+   /* forming arrow*/
+  Matrices.model = glm::mat4(1.0f);
+
+  glm::mat4 translateArrow = glm::translate (glm::vec3(0, -10, 0));        // glTranslatef
+ // glm::mat4 translateArrow = glm::translate (glm::vec3(ball_cx, ball_cy, 0)); 
+ // glm::mat4 rotateArrow = glm::rotate((float)(DEG2RAD(arrow_rotation -45)), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
+//  translateArrow = glm::translate (glm::vec3(-1*(ball_cx + ball_shift_dist_x), -1*(ball_cy + ball_shift_dist_y), 0));
+
+ // glm::mat4 translateArrow = glm::translate (glm::vec3(ball_shift_dist_x, ball_shift_dist_y, 0)); 
+  glm::mat4 arrowTransform = translateArrow ;
+
+  Matrices.model *= ( arrowTransform ); 
+  MVP = VP * Matrices.model;
+  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
+
+  // draw3DObject draws the VAO given to it using current MVP matrix */
+  draw3DObject(ground);
 
 }
 
@@ -409,6 +479,7 @@ void initGL (GLFWwindow* window, int width, int height)
   ball_cy = -7.5;
   circle = myboard.createCircle (ball_radius, ball_cx, ball_cy);
   arrow = myboard.createArrow ();
+  ground = myboard.createGround ();
  	
 	// Create and compile our GLSL program from the shaders
 	programID = LoadShaders( "game.vert", "game.frag" );
@@ -428,29 +499,82 @@ void initGL (GLFWwindow* window, int width, int height)
 }
 
 // ensures that ball and canon are together always
-void ballAndCanon()
+/*void ballAndCanon()
 {
   if(ball_move_flag==0)
   {
-    ball_shift_dist_x = canon_shift_dist_x;
-    ball_shift_dist_y = canon_shift_dist_y;
+  //  ball_shift_dist_x = canon_shift_dist_x;
+    //ball_shift_dist_y = canon_shift_dist_y;
   }
 
-}
+}*/
 
+/* updating ball's position under gravity and air friction*/
 void updateBallPosition()
 {
+  double res ;
+
   double current_time, timeElapsed;
   current_time = glfwGetTime();
   timeElapsed = current_time - ball_Inittime;
 
-  ball_shift_dist_x = ball_velocity*(timeElapsed)*(cos(arrow_rotation));  
+  if(ball_velocity==0)
+  {
+    ball_shift_dist_x = 0;
+    ball_shift_dist_y = 0;
+  }
+  else
+  {
+    res = exp (-1*((gravity*timeElapsed)/vt)); 
+    
+  //ball_shift_dist_x = ball_velocity*(timeElapsed)*(cos(arrow_rotation));  
 
-  ball_shift_dist_y = ball_velocity*(timeElapsed)*(sin(arrow_rotation));
+  ball_shift_dist_x = ((vox*vt)/gravity)*(1 - res);
 
-  ball_shift_dist_y -= (0.5)*gravity*(timeElapsed*(timeElapsed));
+ // ball_shift_dist_y = ball_velocity*(timeElapsed)*(sin(arrow_rotation));
+
+//  ball_shift_dist_y -= (0.5)*gravity*(timeElapsed*(timeElapsed));
+  ball_shift_dist_y = ((voy+vt)*(vt/gravity))*(1-res) - (vt*timeElapsed);
+
+  /* ball touches the ground*/
+  if(ball_shift_dist_y + ball_cy <=-10)
+  {
+    friction_init_time =current_time;
+    friction = 1;
+    velocityFriction = vx;
+  }
+  }
 
 }
+
+/* updating ball velocity under gravity and air friction*/
+void updateBallVelocity()
+{
+  double res;
+  double current_time, timeElapsed;
+  current_time = glfwGetTime();
+  timeElapsed = current_time - ball_Inittime;
+
+  res = exp ((-1*gravity*timeElapsed)/vt);
+  if(ball_move_flag)
+  {
+    vx = vox*res;
+    vy = voy*res - vt*(1-res);
+  }
+}
+
+/* initializing friction */
+void initFriction()
+{
+  double timeElapsed;
+  timeElapsed = glfwGetTime() - friction_init_time;
+
+  vx = velocityFriction - (frictionCoefficient*(gravity*timeElapsed));
+
+  if(vx>threshold_velocity)
+    friction_dist = velocityFriction*timeElapsed - ((timeElapsed*timeElapsed)*(gravity*frictionCoefficient))/2; 
+}
+
 
 int main (int argc, char** argv)
 {
@@ -467,10 +591,13 @@ int main (int argc, char** argv)
     while (!glfwWindowShouldClose(window)) {
 
         // OpenGL Draw commands
-        ballAndCanon();
+       // ballAndCanon();
         draw();
+        drawGround();
         drawRectangle();
-        drawCircle();
+        updateBallVelocity();
+      //  if(ball_velocity>threshold_velocity || ball_move_flag==0)
+          drawCircle();
         if(ball_move_flag==0)
           drawArrow();
 
@@ -482,12 +609,15 @@ int main (int argc, char** argv)
 
         // Control based on time (Time based transformation like 5 degrees rotation every 0.5s)
         current_time = glfwGetTime(); // Time in seconds
-        if ((current_time - last_update_time) >= 0.000001) { // atleast 0.5s elapsed since last frame
-            // do something every 0.5 seconds ..
+        if ((current_time - last_update_time) >= 0.000001) {
 
           /* move the ball */
-           if(ball_move_flag)
+           if(ball_move_flag==1 && friction==0 )
                 updateBallPosition();
+
+          /* applying ground friction on the ball*/
+           if(friction && vx>0)
+              initFriction();
            
             last_update_time = current_time;
         }
