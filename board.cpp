@@ -1,11 +1,15 @@
-#define DEG2RAD(deg) (deg * PI / 180)
-#define PI 3.141592653589
+#include "globals.h"
+//#define DEG2RAD(deg) (deg * PI / 180)
+//#define PI 3.141592653589
 
+//GLfloat* vertex_buffer_data = new GLfloat [3*360];
+//GLfloat* color_buffer_data = new GLfloat [3*360];
 //#include "globals.cpp"
 class board
 {
 
 public:
+
 	struct VAO {
     GLuint VertexArrayID;
     GLuint VertexBuffer;
@@ -91,28 +95,44 @@ public:
   return create3DObject(GL_TRIANGLES, 3, vertex_buffer_data, color_buffer_data, GL_LINE);
   }
 
-VAO* createRectangle ()
+VAO* createRectangle (float l, float b, float c1, float c2, float c3)
 {
+  int i;
+  GLfloat* vertex_buffer_data = new GLfloat [3*6];
+  GLfloat* color_buffer_data = new GLfloat [3*6];
   // GL3 accepts only Triangles. Quads are not supported
-  static const GLfloat vertex_buffer_data [] = {
-    1,1,0, // vertex 1
-    1,-1,0, // vertex 2
-    -1,-1,0, // vertex 3
 
-     -1,-1,0, // vertex 3
-     -1,1,0, // vertex 4
-     1,1,0  // vertex 1
-  };
+  vertex_buffer_data [0] = l/2;
+  vertex_buffer_data [1] = b/2;
+  vertex_buffer_data [2] = 0;
 
-  static const GLfloat color_buffer_data [] = {
-    1,0,0, // color 1
-    1,0,0, // color 2
-    1,0,0, // color 3
+  vertex_buffer_data [3] = l/2;
+  vertex_buffer_data [4] = -1*(b/2);
+  vertex_buffer_data [5] = 0; 
 
-    1,0,0, // color 3
-    1,0,0, // color 4
-    1,0,0  // color 1
-  };
+  vertex_buffer_data [6] = -1*(l/2);
+  vertex_buffer_data [7] = -1*(b/2);
+  vertex_buffer_data [8] = 0;
+
+  vertex_buffer_data [9] = -1*(l/2);
+  vertex_buffer_data [10] = -1*(b/2);
+  vertex_buffer_data [11] = 0;
+
+  vertex_buffer_data [12] = -1*(l/2);
+  vertex_buffer_data [13] = b/2;
+  vertex_buffer_data [14] = 0; 
+
+  vertex_buffer_data [15] = l/2;
+  vertex_buffer_data [16] = b/2;
+  vertex_buffer_data [17] = 0;
+
+  
+  for(i=0; i<6; i++)
+  {
+    color_buffer_data [3*i] = c1;
+    color_buffer_data [3*i + 1] = c2;
+    color_buffer_data [3*i + 2] = c3;
+  }
 
   // create3DObject creates and returns a handle to a VAO that can be used later
   return create3DObject(GL_TRIANGLES, 6, vertex_buffer_data, color_buffer_data, GL_FILL);
@@ -187,4 +207,17 @@ VAO* createGround ()
 
 }
 
-};
+VAO* createObstacle(float l, float b, float c1, float c2, float c3)
+{
+ 
+
+  double tmp;
+  tmp = sqrt(((l/2)*(l/2))+((b/2)*(b/2)));
+  Obstacles.push_back(make_pair(make_pair(-5.5,-8), tmp));
+  return  createRectangle(l, b, c1, c2, c3);
+
+  // return create3DObject(GL_LINES, 2, vertex_buffer_data, color_buffer_data, GL_LINE);
+
+}
+
+} ;

@@ -14,58 +14,6 @@
 
 using namespace std;
 
-#define GLM_FORCE_RADIANS
-#define DEG2RAD(deg) (deg * PI / 180)
-#define PI 3.141592653589
-
-// globals variables
-float friction = 0;
-float triangle_rot_dir = 1;
-float rectangle_rot_dir = 1;
-bool triangle_rot_status = true;
-bool rectangle_rot_status = true;
-float canon_shift_dist_x = 0;
-float canon_shift_dist_y = 0;
-float ball_shift_dist_x = 0;
-float ball_shift_dist_y = 0;
-float friction_dist = 0;
-float velocityFriction = 0;
-float friction_init_time = 0;
-
-float camera_rotation_angle = 90;
-float rectangle_rotation = 0;
-float triangle_rotation = 0;
-float arrow_rotation = 45;
-
-float ball_radius = 0.5;
-float ball_cx = -9;
-float ball_cy = -7.5;
-float rectangle_cx = -9;
-float rectangle_cy = -9;
-
-float ball_velocity = 1;
-float threshold_velocity = 0.25;
-double ball_Inittime = 0;
-bool ball_move_flag = 0;
-float gravity = 2;
-float airdragConstant = 0.09;
-float frictionCoefficient = 0.3;
-
-
-float vt = gravity/airdragConstant ;
-float vox, voy, vx, vy;
-
-struct VAO {
-    GLuint VertexArrayID;
-    GLuint VertexBuffer;
-    GLuint ColorBuffer;
-
-    GLenum PrimitiveMode;
-    GLenum FillMode;
-    int NumVertices;
-};
-typedef struct VAO VAO; 
-
 struct GLMatrices {
 	glm::mat4 projection;
 	glm::mat4 model;
@@ -304,7 +252,7 @@ void reshapeWindow (GLFWwindow* window, int width, int height)
     Matrices.projection = glm::ortho(-12.0f, 12.0f, -12.0f, 12.0f, 0.1f, 500.0f);
 }
 
-board::VAO *triangle, *rectangle, *circle, *arrow, *ground;
+board::VAO *triangle, *rectangle, *circle, *arrow, *ground, *obstacle;
 
 /* Render the scene with openGL */
 /* Edit this function according to your assignment */
@@ -343,6 +291,25 @@ void draw ()
 
   // draw3DObject draws the VAO given to it using current MVP matrix */
   draw3DObject(rectangle);
+}
+
+void drawObstacle (float cenx, float ceny)
+ {
+  Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); // Fixed camera for 2D (ortho) in XY plane
+  glm::mat4 VP = Matrices.projection * Matrices.view;
+  glm::mat4 MVP;  // MVP = Projection * View * Model
+
+  Matrices.model = glm::mat4(1.0f);
+
+  glm::mat4 translateRectangle = glm::translate (glm::vec3(cenx, ceny, 0));        // glTranslatef
+ /* glm::mat4 rotateRectangle = glm::rotate((float)(rectangle_rotation*M_PI/180.0f), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
+//  translateRectangle = glm::translate (glm::vec3(-9 + ball_shift_dist_x, -9 + ball_shift_dist_y, 0));
+  Matrices.model *= (translateRectangle); 
+  MVP = VP * Matrices.model;
+  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
+
+  // draw3DObject draws the VAO given to it using current MVP matrix */
+  draw3DObject(obstacle);
 }
 
 void drawCircle ()
@@ -472,7 +439,8 @@ void initGL (GLFWwindow* window, int width, int height)
 {
     /* Objects should be created before any other gl function and shaders */
 
-	rectangle = myboard.createRectangle ();
+	rectangle = myboard.createRectangle (2, 2, 1, 0, 0);
+//  cout<<"created rectangle\n";
 
   ball_radius = 0.5;
   ball_cx = -9;
@@ -481,6 +449,7 @@ void initGL (GLFWwindow* window, int width, int height)
   arrow = myboard.createArrow ();
   ground = myboard.createGround ();
  	
+  obstacle = myboard.createObstacle(1, 4, 1, 0, 1);
 	// Create and compile our GLSL program from the shaders
 	programID = LoadShaders( "game.vert", "game.frag" );
 	// Get a handle for our "MVP" uniform
@@ -576,10 +545,12 @@ void initFriction()
 }
 
 
+
 int main (int argc, char** argv)
 {
 	int width = 960;
 	int height = 690;
+  pair<float, float> p;
 
   GLFWwindow* window = initGLFW(width, height);
 
@@ -596,6 +567,11 @@ int main (int argc, char** argv)
         drawGround();
         drawRectangle();
         updateBallVelocity();
+        p = Obstacles[0].first;
+       // cout<<"p"<<endl;
+        //cout<<p.first<<" "<<p.second<<endl;
+        drawObstacle(p.first, p.second);
+
       //  if(ball_velocity>threshold_velocity || ball_move_flag==0)
           drawCircle();
         if(ball_move_flag==0)
