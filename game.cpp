@@ -5,7 +5,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-//#include "globals.h"
+#include "globals.h"
 #include "board.cpp"
 
 #include <glm/glm.hpp>
@@ -13,6 +13,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 using namespace std;
+
+float last_position_x = rectangle_cx;
+float last_position_y = rectangle_cy+1+0.5;
 
 struct GLMatrices {
 	glm::mat4 projection;
@@ -113,6 +116,138 @@ void quit(GLFWwindow *window)
     exit(EXIT_SUCCESS);
 }
 
+/* get angle between object's velocity and horizontal */
+double getTheta()
+{
+  theta = atan2(vy, vx);
+  theta = (theta*(180))/PI;
+  return theta;
+}
+
+/*get distance between two points (x1,y1) and (x2,y2)*/
+float getDIst(float x1, float y1, float x2, float y2)
+{
+  float tmp;
+  tmp = sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
+  return tmp; 
+}
+
+/*get velocity of the ball*/
+void getballVelocity()
+{
+  ball_velocity = sqrt(vx*vx + vy*vy);
+}
+
+
+/*update com[onents of velocity upon collision*/
+void updateVelocityComponents(float newVelocity, double angle)
+{
+  ball_velocity = newVelocity;
+  vx = ball_velocity*cos(DEG2RAD(angle));
+  vy = ball_velocity*sin(DEG2RAD(angle));
+  vox = vx;
+  voy = vy;
+  cout<<"angle: "<<angle<<" "<<"new velocity: "<<ball_velocity<<endl;
+  cout<<"x: "<<vox<<" "<<"y: "<<voy<<endl;
+  ball_Inittime = glfwGetTime();
+}
+
+/*set positions on change of ball's state*/
+void resetLastPosition()
+{
+  last_position_x = last_position_x + ball_shift_dist_x;
+  last_position_y = last_position_y + ball_shift_dist_y;
+  ball_shift_dist_x = 0;
+  ball_shift_dist_y = 0;
+}
+
+/*Update ball's position as per velocity*/
+void updateBallPosition()
+{
+  double res ;
+
+  double current_time, timeElapsed;
+  current_time = glfwGetTime();
+  timeElapsed = current_time - ball_Inittime;
+
+  if(ball_velocity==0)
+  {
+    resetLastPosition();
+  }
+  else
+  {
+    res = exp (-1*((gravity*timeElapsed)/vt)); 
+    ball_shift_dist_x = ((vox*vt)/gravity)*(1 - res);
+    ball_shift_dist_y = ((voy+vt)*(vt/gravity))*(1-res) - (vt*timeElapsed);
+    if(ball_shift_dist_y + last_position_y <=-10)
+    {
+      resetLastPosition();
+      friction_init_time =current_time;
+      friction = 1;
+      velocityFriction = vx;
+    }
+  }
+}
+
+
+/*check collision with the obstacles*/
+void checkCollision()
+{
+  float x, y, r, e;
+  double angle;
+  int i;
+  pair<float, float> p, q;
+  for(i=0 ;i<Obstacles.size(); i++)
+  {
+    p = Obstacles[i].first;
+    x=  p.first;
+    y = p.second;
+    q = Obstacles[i].second;
+    r = q.second;
+    e = q.first;
+
+    if(getDIst(ball_cx_curr, ball_cy_curr, x, y) <= r)
+    {
+      cout<<"collided  with obstacle no. "<<i+1<< " ";
+      resetLastPosition();
+      angle = getTheta();
+      cout<<"angle: "<<angle<<endl;
+      //if(vx>0)
+      if(vx!=0)
+        angle = 180 + angle;
+//      else if(vx==0)
+      else
+        angle = -1*theta;
+      updateVelocityComponents(e*ball_velocity, angle);
+      updateBallPosition();
+      if(vx<0)
+        ball_shift_dist_x -= 0.1;
+      else
+        ball_shift_dist_x += 0.1;
+      if(vy>0)
+        ball_shift_dist_y += 0.1;
+      else 
+        ball_shift_dist_y -= 0.1;
+    }
+  }
+}
+
+/*update velocity as per gravity and air friction*/
+void updateBallVelocity()
+{
+  double res;
+  double current_time, timeElapsed;
+  current_time = glfwGetTime();
+  timeElapsed = current_time - ball_Inittime;
+
+  res = exp ((-1*gravity*timeElapsed)/vt);
+  if(ball_move_flag)
+  {
+    vx = vox*res;
+    vy = voy*res - vt*(1-res);
+  }
+}
+
 /* Render the VBOs handled by VAO */
 void draw3DObject (board::VAO* vao)
 {
@@ -136,7 +271,6 @@ void draw3DObject (board::VAO* vao)
     glDrawArrays(vao->PrimitiveMode, 0, vao->NumVertices); // Starting from vertex 0; 3 vertices total -> 1 triangle
 }
 
-/* Executed when a regular key is pressed/released/held-down */
 /* Prefered for Keyboard events */
 void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -145,18 +279,18 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
     if (action == GLFW_RELEASE) {
         switch (key) {
             case GLFW_KEY_LEFT:
-                if(canon_shift_dist_x > -2)
-                {
-                  canon_shift_dist_x -= 0.25;
-                //  box_shift_dist_x -= 0.25;
-                }
-                break;
+              if(canon_shift_dist_x > -2)
+              {
+                canon_shift_dist_x -= 0.25; 
+                last_position_x = rectangle_cx + canon_shift_dist_x;
+              }               
+             break;
 
             case GLFW_KEY_RIGHT:
               if(canon_shift_dist_x < 20)
               {
                 canon_shift_dist_x += 0.25;
-              //  ball_shift_dist_x += 0.25;
+                last_position_x = rectangle_cx + canon_shift_dist_x;
               }  
               break;
 
@@ -173,21 +307,25 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
             case GLFW_KEY_SPACE:
               if(ball_move_flag==0)
               {
-                  vox = ball_velocity*cos(DEG2RAD(arrow_rotation));
-                  voy = ball_velocity*sin(DEG2RAD(arrow_rotation));
+                resetLastPosition();
+                  vox = ball_velocity*cos(DEG2RAD(theta));
+                  voy = ball_velocity*sin(DEG2RAD(theta));
                   ball_move_flag = 1;
                   ball_Inittime = glfwGetTime();
               }
               break;
 
+            /* theta is not in radians anywhere*/
             case GLFW_KEY_A:
-                if(arrow_rotation < 85)
+                if(arrow_rotation < 45)
                   arrow_rotation += 5;
+                theta = arrow_rotation + 45;
                 break;
 
             case GLFW_KEY_B:
-                if(arrow_rotation > 5)
+                if(arrow_rotation > -45)
                   arrow_rotation -= 5;
+                theta = arrow_rotation + 45;
                 break;
             default: 
                 break;
@@ -235,99 +373,73 @@ void mouseButton (GLFWwindow* window, int button, int action, int mods)
     }
 }
 
-
-/* Executed when window is resized to 'width' and 'height' */
-/* Modify the bounds of the screen here in glm::ortho or Field of View in glm::Perspective */
 void reshapeWindow (GLFWwindow* window, int width, int height)
 {
     int fbwidth=width, fbheight=height;
-
     glfwGetFramebufferSize(window, &fbwidth, &fbheight);
-
 	  GLfloat fov = 90.0f;
-
-	// sets the viewport of openGL renderer
 	  glViewport (0, 0, (GLsizei) fbwidth, (GLsizei) fbheight);
     // Ortho projection for 2D views
     Matrices.projection = glm::ortho(-12.0f, 12.0f, -12.0f, 12.0f, 0.1f, 500.0f);
 }
 
-board::VAO *triangle, *rectangle, *circle, *arrow, *ground, *obstacle;
+board::VAO *triangle, *rectangle, *circle, *arrow, *ground, *obstacle[10];
 
-/* Render the scene with openGL */
-/* Edit this function according to your assignment */
 void draw ()
 {
-  // clear the color and depth in the frame buffer
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  // use the loaded shader program
-  // Don't change unless you know what you are doing
   glUseProgram (programID);
-
-  // Eye - Location of camera. Don't change unless you are sure!!
   glm::vec3 eye ( 5*cos(camera_rotation_angle*M_PI/180.0f), 0, 5*sin(camera_rotation_angle*M_PI/180.0f) );
-  // Target - Where is the camera looking at.  Don't change unless you are sure!!
   glm::vec3 target (0, 0, 0);
-  // Up - Up vector defines tilt of camera.  Don't change unless you are sure!!
   glm::vec3 up (0, 1, 0);
-
 }
-  void drawRectangle ()
+
+void drawRectangle ()
  {
   Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); // Fixed camera for 2D (ortho) in XY plane
   glm::mat4 VP = Matrices.projection * Matrices.view;
   glm::mat4 MVP;	// MVP = Projection * View * Model
 
-  // Load identity to model matrix
-
   Matrices.model = glm::mat4(1.0f);
 
   glm::mat4 translateRectangle = glm::translate (glm::vec3(rectangle_cx + canon_shift_dist_x, rectangle_cy + canon_shift_dist_y , 0));        // glTranslatef
- /* glm::mat4 rotateRectangle = glm::rotate((float)(rectangle_rotation*M_PI/180.0f), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
-//  translateRectangle = glm::translate (glm::vec3(-9 + ball_shift_dist_x, -9 + ball_shift_dist_y, 0));
   Matrices.model *= (translateRectangle); 
   MVP = VP * Matrices.model;
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-
-  // draw3DObject draws the VAO given to it using current MVP matrix */
   draw3DObject(rectangle);
 }
 
-void drawObstacle (float cenx, float ceny)
+/* function to draw static obstacles on the board */
+void drawObstacle (float cenx, float ceny, board::VAO *obs)
  {
-  Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); // Fixed camera for 2D (ortho) in XY plane
+  Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0));
   glm::mat4 VP = Matrices.projection * Matrices.view;
-  glm::mat4 MVP;  // MVP = Projection * View * Model
+  glm::mat4 MVP; 
 
   Matrices.model = glm::mat4(1.0f);
 
-  glm::mat4 translateRectangle = glm::translate (glm::vec3(cenx, ceny, 0));        // glTranslatef
- /* glm::mat4 rotateRectangle = glm::rotate((float)(rectangle_rotation*M_PI/180.0f), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
-//  translateRectangle = glm::translate (glm::vec3(-9 + ball_shift_dist_x, -9 + ball_shift_dist_y, 0));
+  glm::mat4 translateRectangle = glm::translate (glm::vec3(cenx, ceny, 0));        
   Matrices.model *= (translateRectangle); 
   MVP = VP * Matrices.model;
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-
-  // draw3DObject draws the VAO given to it using current MVP matrix */
-  draw3DObject(obstacle);
+  draw3DObject(obs);
 }
 
 void drawCircle ()
 {
- Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); // Fixed camera for 2D (ortho) in XY plane
+ Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); 
   glm::mat4 VP = Matrices.projection * Matrices.view;
-  glm::mat4 MVP;  // MVP = Projection * View * Model
+  glm::mat4 MVP; 
 
   /* forming circle */
   Matrices.model = glm::mat4(1.0f);
 
-  glm::mat4 translateCircle = glm::translate (glm::vec3(rectangle_cx +  canon_shift_dist_x + ball_shift_dist_x + friction_dist, ball_cy + ball_shift_dist_y, 0));        // glTranslatef
- // glm::mat4 rotateRectangle = glm::rotate((float)(arrow_rotation*M_PI/180.0f), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
+  ball_cx_curr = last_position_x + ball_shift_dist_x;
+  ball_cy_curr = last_position_y + ball_shift_dist_y;
+  glm::mat4 translateCircle = glm::translate (glm::vec3(last_position_x + ball_shift_dist_x, last_position_y + ball_shift_dist_y, 0));        // glTranslatef
   Matrices.model *= (translateCircle); 
   MVP = VP * Matrices.model;
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]); 
-
-  // draw3DObject draws the VAO given to it using current MVP matrix */
   draw3DObject(circle);
 }
 
@@ -338,22 +450,14 @@ void drawArrow ()
   glm::mat4 VP = Matrices.projection * Matrices.view;
   glm::mat4 MVP;
 
-   /* forming arrow*/
   Matrices.model = glm::mat4(1.0f);
 
   glm::mat4 translateArrow = glm::translate (glm::vec3(ball_cx + canon_shift_dist_x, ball_cy + canon_shift_dist_y, 0));        // glTranslatef
- // glm::mat4 translateArrow = glm::translate (glm::vec3(ball_cx, ball_cy, 0)); 
-  glm::mat4 rotateArrow = glm::rotate((float)(DEG2RAD(arrow_rotation -45)), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
-//  translateArrow = glm::translate (glm::vec3(-1*(ball_cx + ball_shift_dist_x), -1*(ball_cy + ball_shift_dist_y), 0));
-
- // glm::mat4 translateArrow = glm::translate (glm::vec3(ball_shift_dist_x, ball_shift_dist_y, 0)); 
+  glm::mat4 rotateArrow = glm::rotate((float)(DEG2RAD(arrow_rotation)), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
   glm::mat4 arrowTransform = translateArrow * rotateArrow;
-
   Matrices.model *= ( arrowTransform ); 
   MVP = VP * Matrices.model;
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-
-  // draw3DObject draws the VAO given to it using current MVP matrix */
   draw3DObject(arrow);
 
 }
@@ -368,28 +472,19 @@ void drawGround ()
    /* forming arrow*/
   Matrices.model = glm::mat4(1.0f);
 
-  glm::mat4 translateArrow = glm::translate (glm::vec3(0, -10, 0));        // glTranslatef
- // glm::mat4 translateArrow = glm::translate (glm::vec3(ball_cx, ball_cy, 0)); 
- // glm::mat4 rotateArrow = glm::rotate((float)(DEG2RAD(arrow_rotation -45)), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
-//  translateArrow = glm::translate (glm::vec3(-1*(ball_cx + ball_shift_dist_x), -1*(ball_cy + ball_shift_dist_y), 0));
-
- // glm::mat4 translateArrow = glm::translate (glm::vec3(ball_shift_dist_x, ball_shift_dist_y, 0)); 
+  glm::mat4 translateArrow = glm::translate (glm::vec3(0, -10, 0));        
   glm::mat4 arrowTransform = translateArrow ;
 
   Matrices.model *= ( arrowTransform ); 
   MVP = VP * Matrices.model;
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-
-  // draw3DObject draws the VAO given to it using current MVP matrix */
   draw3DObject(ground);
 
 }
 
-/* Initialise glfw window, I/O callbacks and the renderer to use */
-/* Nothing to Edit here */
 GLFWwindow* initGLFW (int width, int height)
 {
-    GLFWwindow* window; // window desciptor/handle
+    GLFWwindow* window; 
 
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
@@ -412,35 +507,22 @@ GLFWwindow* initGLFW (int width, int height)
     gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
     glfwSwapInterval( 1 );
 
-    /* --- register callbacks with GLFW --- */
-
-    /* Register function to handle window resizes */
-    /* With Retina display on Mac OS X GLFW's FramebufferSize
-     is different from WindowSize */
     glfwSetFramebufferSizeCallback(window, reshapeWindow);
     glfwSetWindowSizeCallback(window, reshapeWindow);
-
-    /* Register function to handle window close */
     glfwSetWindowCloseCallback(window, quit);
-
-    /* Register function to handle keyboard input */
-    glfwSetKeyCallback(window, keyboard);      // general keyboard input
-    glfwSetCharCallback(window, keyboardChar);  // simpler specific character handling
-
-    /* Register function to handle mouse click */
-    glfwSetMouseButtonCallback(window, mouseButton);  // mouse button clicks
+    glfwSetKeyCallback(window, keyboard);      
+    glfwSetCharCallback(window, keyboardChar); 
+    glfwSetMouseButtonCallback(window, mouseButton);  
 
     return window;
 }
 
-/* Initialize the OpenGL rendering properties */
 /* Add all the models to be created here */
 void initGL (GLFWwindow* window, int width, int height)
 {
     /* Objects should be created before any other gl function and shaders */
-
+  ball_velocity = 6.5;
 	rectangle = myboard.createRectangle (2, 2, 1, 0, 0);
-//  cout<<"created rectangle\n";
 
   ball_radius = 0.5;
   ball_cx = -9;
@@ -449,87 +531,25 @@ void initGL (GLFWwindow* window, int width, int height)
   arrow = myboard.createArrow ();
   ground = myboard.createGround ();
  	
-  obstacle = myboard.createObstacle(1, 4, 1, 0, 1);
-	// Create and compile our GLSL program from the shaders
-	programID = LoadShaders( "game.vert", "game.frag" );
-	// Get a handle for our "MVP" uniform
+  /*creating obstacles on the board*/
+  //for(int i=0; i<3; i++)
+  //{
+    obstacle[0] = myboard.createObstacle(1, 4, 1, 0, 1, -5.5, -8, 0.5);
+    obstacle[1] = myboard.createObstacle(3, 6, 1, 0.5, 0.5, 1.5, -7, 0.5);
+	
+  programID = LoadShaders( "game.vert", "game.frag" );
 	Matrices.MatrixID = glGetUniformLocation(programID, "MVP");
 
+  updateVelocityComponents(ball_velocity, DEG2RAD(45));
 	reshapeWindow (window, width, height);
 
     // Background color of the scene
-	glClearColor (0.0f, 0.0f, 0.0f, 0.0f); // R, G, B, A
-//	glClearDepth (1.0f);
+	glClearColor (0.0f, 0.0f, 0.0f, 0.0f);
 
     cout << "VENDOR: " << glGetString(GL_VENDOR) << endl;
     cout << "RENDERER: " << glGetString(GL_RENDERER) << endl;
     cout << "VERSION: " << glGetString(GL_VERSION) << endl;
     cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
-}
-
-// ensures that ball and canon are together always
-/*void ballAndCanon()
-{
-  if(ball_move_flag==0)
-  {
-  //  ball_shift_dist_x = canon_shift_dist_x;
-    //ball_shift_dist_y = canon_shift_dist_y;
-  }
-
-}*/
-
-/* updating ball's position under gravity and air friction*/
-void updateBallPosition()
-{
-  double res ;
-
-  double current_time, timeElapsed;
-  current_time = glfwGetTime();
-  timeElapsed = current_time - ball_Inittime;
-
-  if(ball_velocity==0)
-  {
-    ball_shift_dist_x = 0;
-    ball_shift_dist_y = 0;
-  }
-  else
-  {
-    res = exp (-1*((gravity*timeElapsed)/vt)); 
-    
-  //ball_shift_dist_x = ball_velocity*(timeElapsed)*(cos(arrow_rotation));  
-
-  ball_shift_dist_x = ((vox*vt)/gravity)*(1 - res);
-
- // ball_shift_dist_y = ball_velocity*(timeElapsed)*(sin(arrow_rotation));
-
-//  ball_shift_dist_y -= (0.5)*gravity*(timeElapsed*(timeElapsed));
-  ball_shift_dist_y = ((voy+vt)*(vt/gravity))*(1-res) - (vt*timeElapsed);
-
-  /* ball touches the ground*/
-  if(ball_shift_dist_y + ball_cy <=-10)
-  {
-    friction_init_time =current_time;
-    friction = 1;
-    velocityFriction = vx;
-  }
-  }
-
-}
-
-/* updating ball velocity under gravity and air friction*/
-void updateBallVelocity()
-{
-  double res;
-  double current_time, timeElapsed;
-  current_time = glfwGetTime();
-  timeElapsed = current_time - ball_Inittime;
-
-  res = exp ((-1*gravity*timeElapsed)/vt);
-  if(ball_move_flag)
-  {
-    vx = vox*res;
-    vy = voy*res - vt*(1-res);
-  }
 }
 
 /* initializing friction */
@@ -541,10 +561,8 @@ void initFriction()
   vx = velocityFriction - (frictionCoefficient*(gravity*timeElapsed));
 
   if(vx>threshold_velocity)
-    friction_dist = velocityFriction*timeElapsed - ((timeElapsed*timeElapsed)*(gravity*frictionCoefficient))/2; 
+    ball_shift_dist_x = velocityFriction*timeElapsed - ((timeElapsed*timeElapsed)*(gravity*frictionCoefficient))/2; 
 }
-
-
 
 int main (int argc, char** argv)
 {
@@ -560,24 +578,30 @@ int main (int argc, char** argv)
 
     /* Draw in loop */
     while (!glfwWindowShouldClose(window)) {
-
         // OpenGL Draw commands
-       // ballAndCanon();
+     
         draw();
         drawGround();
         drawRectangle();
-        updateBallVelocity();
-        p = Obstacles[0].first;
-       // cout<<"p"<<endl;
-        //cout<<p.first<<" "<<p.second<<endl;
-        drawObstacle(p.first, p.second);
+        if(ball_move_flag)
+          updateBallVelocity();
 
-      //  if(ball_velocity>threshold_velocity || ball_move_flag==0)
-          drawCircle();
+        if(ball_move_flag==0)
+            updateVelocityComponents(ball_velocity, theta);
+       
+        getballVelocity();
+
+        /* draw obstacles on the board */
+        for(int i=0; i<2; i++)
+        {
+          p = Obstacles[i].first;         
+          drawObstacle(p.first, p.second, obstacle[i]);
+        }
+
+        drawCircle();
         if(ball_move_flag==0)
           drawArrow();
 
-        // Swap Frame Buffer in double buffering
         glfwSwapBuffers(window);
 
         // Poll for Keyboard and mouse events
@@ -586,6 +610,10 @@ int main (int argc, char** argv)
         // Control based on time (Time based transformation like 5 degrees rotation every 0.5s)
         current_time = glfwGetTime(); // Time in seconds
         if ((current_time - last_update_time) >= 0.000001) {
+
+        if(ball_move_flag)
+          checkCollision();
+        drawCircle();  
 
           /* move the ball */
            if(ball_move_flag==1 && friction==0 )

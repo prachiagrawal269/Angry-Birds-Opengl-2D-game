@@ -1,10 +1,6 @@
 #include "globals.h"
-//#define DEG2RAD(deg) (deg * PI / 180)
-//#define PI 3.141592653589
 
-//GLfloat* vertex_buffer_data = new GLfloat [3*360];
-//GLfloat* color_buffer_data = new GLfloat [3*360];
-//#include "globals.cpp"
+/*class containing functions to create objects*/
 class board
 {
 
@@ -207,16 +203,13 @@ VAO* createGround ()
 
 }
 
-VAO* createObstacle(float l, float b, float c1, float c2, float c3)
+VAO* createObstacle(float l, float b, float c1, float c2, float c3, float cenx, float ceny, float e)
 {
- 
 
   double tmp;
   tmp = sqrt(((l/2)*(l/2))+((b/2)*(b/2)));
-  Obstacles.push_back(make_pair(make_pair(-5.5,-8), tmp));
+  Obstacles.push_back(make_pair(make_pair(cenx, ceny), make_pair(e, tmp)));
   return  createRectangle(l, b, c1, c2, c3);
-
-  // return create3DObject(GL_LINES, 2, vertex_buffer_data, color_buffer_data, GL_LINE);
 
 }
 

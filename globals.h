@@ -1,6 +1,6 @@
 /* file containing all the required header files */
-#ifndef header_h
-#define header_h
+#ifndef globals_h
+#define globals_h
 
 #include <bits/stdc++.h>
 using namespace std;
@@ -26,15 +26,18 @@ float friction_init_time = 0;
 float camera_rotation_angle = 90;
 float rectangle_rotation = 0;
 float triangle_rotation = 0;
-float arrow_rotation = 45;
+float arrow_rotation = 0;
+double theta = 45;
 
 float ball_radius = 0.5;
 float ball_cx = -9;
 float ball_cy = -7.5;
+float ball_cx_curr = -9;
+float ball_cy_curr = -7.5;
 float rectangle_cx = -9;
 float rectangle_cy = -9;
 
-float ball_velocity = 1;
+float ball_velocity ;
 float threshold_velocity = 0.25;
 double ball_Inittime = 0;
 bool ball_move_flag = 0;
@@ -44,7 +47,9 @@ float frictionCoefficient = 0.3;
 
 float vt = gravity/airdragConstant ;
 float vox, voy, vx, vy;
-vector<pair<pair<float, float>, float> > Obstacles; 
+
+/*obstacle's center coordinates, restitution coefficient and its radius*/
+vector<pair<pair<float, float>, pair<float, float> > > Obstacles; 
 
 /* funcitons */
 void createObstacle(float l, float b, float c1, float c2, float c3);
