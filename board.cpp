@@ -134,7 +134,7 @@ VAO* createRectangle (float l, float b, float c1, float c2, float c3)
   return create3DObject(GL_TRIANGLES, 6, vertex_buffer_data, color_buffer_data, GL_FILL);
 }
 
-VAO* createCircle (float rad, float cx, float cy)
+VAO* createCircle (float rad, float c1, float c2, float c3)
 {
 
   GLfloat* vertex_buffer_data = new GLfloat [3*360];
@@ -145,9 +145,9 @@ VAO* createCircle (float rad, float cx, float cy)
       vertex_buffer_data [3*i + 1] = (rad * sin(DEG2RAD(i)));
       vertex_buffer_data [3*i + 2] = 0;
 
-      color_buffer_data [3*i] = 0;
-      color_buffer_data [3*i + 1] = 0;
-      color_buffer_data [3*i + 2] = 1;
+      color_buffer_data [3*i] = c1;
+      color_buffer_data [3*i + 1] = c2;
+      color_buffer_data [3*i + 2] = c3;
 
    }
 
@@ -207,10 +207,282 @@ VAO* createObstacle(float l, float b, float c1, float c2, float c3, float cenx, 
 {
 
   double tmp;
-  tmp = sqrt(((l/2)*(l/2))+((b/2)*(b/2)));
+  tmp = sqrt(((l*l)/4)+((b*b)/4)) ;
   Obstacles.push_back(make_pair(make_pair(cenx, ceny), make_pair(e, tmp)));
   return  createRectangle(l, b, c1, c2, c3);
 
 }
 
 } ;
+
+
+class rectangle
+{
+public:
+    float l;
+    float b;
+    float cenx;
+    float ceny;
+    float r;
+    float translateX;
+    float translateY;
+    float rColor[3];
+
+    void initRect(float len, float brd, float x, float y, float rad)
+    {
+      l = len;
+      b = brd;
+      cenx = x;
+      ceny = y;
+      r = rad;
+    //  translateX = 0;
+     // translateY = 0;
+    }
+
+    void resetTranslateRect()
+    {
+      translateX = 0;
+      translateY = 0;
+    }
+
+    void initRectColor(float c1, float c2, float c3)
+    {
+      rColor[0] = c1;
+      rColor[1] = c2;
+      rColor[2] = c3;
+    }
+
+    void rectTranslateX(float x)
+    {
+      translateX += x;
+    }
+
+    void rectTranslateY(float y)
+    {
+      translateY += y;
+    }
+
+};
+
+class ball
+{
+public:
+
+    float cenx;
+    float ceny;
+    float rad;
+    float bColor[4];
+    float velocity;
+    float vox;
+    float voy;
+    float vx;
+    float vy;
+    float angle;
+    float ax;
+    float ay;
+    float basePositionX;
+    float basePositionY;
+    float translateX;
+    float translateY;
+    bool frictionFlag;
+    bool isMovable;
+    bool moveFlag;    
+    float initTime;
+
+    void initBallCentre(float x, float y, float r, bool move)
+    {
+      cenx = x;
+      ceny = y;
+      rad = r;
+      translateX = 0;
+      translateY = 0;
+      basePositionX = cenx;
+      basePositionY = ceny;
+      moveFlag = 0;
+      isMovable = move;
+      frictionFlag = 0;
+    }
+
+    void initBallColor(float c1, float c2, float c3)
+    {
+      bColor[0] = c1;
+      bColor[1] = c2;
+      bColor[2] = c3;
+    }
+
+    void initVelocity(float v, float a)
+    {
+      velocity = v;
+      angle = a;
+      vox = v*cos(DEG2RAD(a));
+      voy = v*sin(DEG2RAD(a));
+      vx = vox;
+      vy = voy;
+     // ax = aax;
+      //ay = aay;
+    }
+
+    void setinitTime()
+    {
+      initTime = glfwGetTime();
+    }
+
+    float getinitTime()
+    {
+      return initTime;
+    }
+
+    void setbasePositionX(float x)
+    {
+      basePositionX += x;
+    }
+
+    void setbasePositionY(float y)
+    {
+      basePositionY += y;
+    }
+
+    void resetPosition()
+    {
+      basePositionX = basePositionX + translateX;
+      basePositionY = basePositionY + translateY;
+      translateX = 0;
+      translateY = 0;
+    }
+
+    void updateBallVelocity()
+    {
+       double res;
+       double current_time, timeElapsed;
+       current_time = glfwGetTime();
+       timeElapsed = current_time - getinitTime();
+
+       res = exp ((-1*gravity*timeElapsed)/vt);
+
+       if(moveFlag)
+       {
+         vx = vox*res;
+         vy = voy*res - vt*(1-res);
+         cout<<"vx: "<<vx<<" "<<"vy: "<<vy<<endl;
+       }
+    }
+
+    /*update com[onents of velocity upon collision */
+    void updateVelocityComponents(float newVelocity, float angl) 
+    {
+      velocity = newVelocity;
+      vx = velocity*cos(DEG2RAD(angl));
+      vy = velocity*sin(DEG2RAD(angl));
+      angle = angl;
+      vox = vx;
+      voy = vy;
+ // cout<<"angle: "<<angle<<" "<<"new velocity: "<<ball_velocity<<endl;
+  //cout<<"x: "<<vox<<" "<<"y: "<<voy<<endl;
+      setinitTime();
+
+    }
+
+    void getballVelocity()
+    {
+      velocity = sqrt(vx*vx + vy*vy);
+    }
+
+    float getTheta()
+    {
+      float theta;
+      theta = atan2(vy, vx);
+      theta = (theta*(180))/PI;
+      return theta;
+    }
+
+    void updateBallPosition()
+    {
+      double res, t ;
+
+      double current_time, timeElapsed;
+      current_time = glfwGetTime();
+      t = getinitTime();
+      timeElapsed = current_time - t;
+
+    //  cout<<"time: "<<timeElapsed<<endl;
+      cout<<"velocity: "<<velocity<<endl;
+      if(velocity==0)
+      {
+        resetPosition();
+      }
+      else
+      {
+        res = exp (-1*((gravity*timeElapsed)/vt)); 
+        translateX = ((vox*vt)/gravity)*(1 - res);
+        translateY = ((voy+vt)*(vt/gravity))*(1-res) - (vt*timeElapsed);
+        cout<<"translate "<<translateX<<" "<<translateY<<endl;
+       /* if(translateY + basePositionY <=-10)
+        {
+          resetPosition();
+          friction_init_time =current_time;
+          friction = 1;
+          velocityFriction = vx;
+        } */
+      }
+    }
+
+    bool checkFriction()
+    {
+      if(translateY + basePositionY <=-10)
+        {
+          cout<<"friction identified\n";
+          frictionFlag = 1;
+          resetPosition();
+          setinitTime();
+        //  friction_init_time = glfwGetTime();
+        //  friction = 1;
+          vox = vx;
+          return 1;
+        } 
+      else
+        return 0;
+    }
+
+    void initFriction()
+    {
+      double timeElapsed, tmp;
+      timeElapsed = glfwGetTime() - getinitTime() + 0.01;
+
+      tmp = abs(abs(vox) - (frictionCoefficient*(gravity*timeElapsed)));
+      if(vx<0)
+      {
+        if(vx*(-1*tmp) <0)
+          vx = 0;
+        else
+          vx = -1*tmp;
+      }
+      else
+      {
+        if(vx*tmp <0 )
+          vx = 0;
+        else
+          vx = tmp;
+      }
+
+    //  cout<<"vtx: "<<vx<<" "<<threshold_velocity<<endl;;
+      if(abs(vx)>threshold_velocity)
+      {
+        cout<<"time elap: "<<timeElapsed<<endl;
+        tmp = abs(abs(vox*timeElapsed) - ((timeElapsed*timeElapsed)*(gravity*frictionCoefficient))/2); 
+        
+     //   cout<<"tx: "<<(timeElapsed*timeElapsed)*(gravity*frictionCoefficient)/2<<" "; 
+      //  cout<<vox*timeElapsed<<endl;
+        if(vx<0)
+          translateX = -1*(tmp);
+        else
+          translateX = tmp;
+      }
+      else
+        translateX = 0;
+
+
+      cout<<"transx: "<<translateX<<endl;
+    }
+  
+
+};

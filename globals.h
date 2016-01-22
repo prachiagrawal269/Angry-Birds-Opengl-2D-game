@@ -27,7 +27,7 @@ float camera_rotation_angle = 90;
 float rectangle_rotation = 0;
 float triangle_rotation = 0;
 float arrow_rotation = 0;
-double theta = 45;
+//double theta = 45;
 
 float ball_radius = 0.5;
 float ball_cx = -9;
@@ -51,7 +51,7 @@ float vox, voy, vx, vy;
 /*obstacle's center coordinates, restitution coefficient and its radius*/
 vector<pair<pair<float, float>, pair<float, float> > > Obstacles; 
 
-/* funcitons */
+/* functions */
 void createObstacle(float l, float b, float c1, float c2, float c3);
 
 /* all bodies have same mass of 1 unit*/
