@@ -29,6 +29,10 @@ GLuint programID;
 board myboard;
 ball scoop, movobs[3];
 rectangle stand, obst[4], speedBar[11];
+int lives = 3;
+float zoom = 1;
+float pan = 0;
+
 /* Function to load Shaders - Use it as it is */
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path) {
 
@@ -260,7 +264,7 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
 
     if (action == GLFW_RELEASE) {
         switch (key) {
-            case GLFW_KEY_LEFT:
+            case GLFW_KEY_L:
               if(canon_shift_dist_x > -2)
               {
                 canon_shift_dist_x -= 0.25; 
@@ -270,7 +274,7 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
               }               
              break;
 
-            case GLFW_KEY_RIGHT:
+            case GLFW_KEY_R:
               if(canon_shift_dist_x < 20)
               {
                 canon_shift_dist_x += 0.25;
@@ -279,6 +283,25 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
 
                // last_position_x = rectangle_cx + canon_shift_dist_x;
               }  
+              break;
+
+            case GLFW_KEY_RIGHT:
+              pan += 1;
+
+            break;
+
+            case GLFW_KEY_LEFT:
+              pan -= 1;
+
+            break;
+
+            case GLFW_KEY_UP:
+              zoom -= 0.1;
+            //  cout<<"up\n";
+              break;
+
+            case GLFW_KEY_DOWN:
+              zoom += 0.1;
               break;
 
             case GLFW_KEY_F:
@@ -345,23 +368,31 @@ void keyboardChar (GLFWwindow* window, unsigned int key)
 }
 
 /* Executed when a mouse button is pressed/released */
-/*void mouseButton (GLFWwindow* window, int button, int action, int mods)
+void mouseButton (GLFWwindow* window, int button, int action, int mods)
 {
     switch (button) {
-        case GLFW_MOUSE_BUTTON_LEFT:
+/*        case GLFW_MOUSE_BUTTON_LEFT:
             if (action == GLFW_RELEASE)
                 triangle_rot_dir *= -1;
-            break;
+            break; */
         case GLFW_MOUSE_BUTTON_RIGHT:
-            if (action == GLFW_RELEASE) {
-                rectangle_rot_dir *= -1;
+            if (action == GLFW_PRESS) {
+                pan 
             }
             break;
         default:
-            break;
+            break; 
     }
 }
- */
+
+void scrollCallback(GLFWwindow* window, double x, double y)
+{
+    zoom += float(y)/4;
+
+    if(zoom < 0)
+      zoom = 0;
+}
+ 
 void reshapeWindow (GLFWwindow* window, int width, int height)
 {
     int fbwidth=width, fbheight=height;
@@ -369,7 +400,6 @@ void reshapeWindow (GLFWwindow* window, int width, int height)
 	  GLfloat fov = 90.0f;
 	  glViewport (0, 0, (GLsizei) fbwidth, (GLsizei) fbheight);
     // Ortho projection for 2D views
-    Matrices.projection = glm::ortho(-12.0f, 12.0f, -12.0f, 12.0f, 0.1f, 500.0f);
 }
 
 board::VAO *triangle, *rect , *circle, *arrow, *ground, *obstacle[10], *obsMovable, *speed_bar[11];
@@ -378,6 +408,7 @@ void draw ()
 {
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram (programID);
+  Matrices.projection = glm::ortho(zoom*(-12.0f + pan), zoom*(12.0f + pan), zoom*(-12.0f), zoom*(12.0f), 0.1f, 500.0f);
   glm::vec3 eye ( 5*cos(camera_rotation_angle*M_PI/180.0f), 0, 5*sin(camera_rotation_angle*M_PI/180.0f) );
   glm::vec3 target (0, 0, 0);
   glm::vec3 up (0, 1, 0);
@@ -439,9 +470,6 @@ void drawCircle (board::VAO *circl, ball Ball)
 
   /* forming circle */
   Matrices.model = glm::mat4(1.0f);
-
- // ball_cx_curr = last_position_x + ball_shift_dist_x;
- // ball_cy_curr = last_position_y + ball_shift_dist_y;
 //  glm::mat4 translateCircle = glm::translate (glm::vec3(last_position_x + ball_shift_dist_x, last_position_y + ball_shift_dist_y, 0));        // glTranslatef
   glm::mat4 translateCircle = glm::translate (glm::vec3(Ball.basePositionX + Ball.translateX, Ball.basePositionY + Ball.translateY, 0));        // glTranslatef
   Matrices.model *= (translateCircle); 
@@ -711,7 +739,8 @@ GLFWwindow* initGLFW (int width, int height)
     glfwSetWindowCloseCallback(window, quit);
     glfwSetKeyCallback(window, keyboard);      
     glfwSetCharCallback(window, keyboardChar); 
-//    glfwSetMouseButtonCallback(window, mouseButton);  
+    glfwSetScrollCallback(window, scrollCallback);
+    glfwSetMouseButtonCallback(window, mouseButton);  
 
     return window;
 }
@@ -816,10 +845,18 @@ int main (int argc, char** argv)
     while (!glfwWindowShouldClose(window)) {
         // OpenGL Draw commands
 
+   //    if(!scoop.moveFlag)
+          glfwPollEvents();
+
         draw();
         drawGround();
         drawRectangle(stand, rect);
-        if(scoop.moveFlag)
+
+
+        /*ensure that there is still life*/
+        if(lives>0 && scoop.checkLife()==0)
+        {
+          if(scoop.moveFlag)
           scoop.updateBallVelocity();
 
         if(scoop.moveFlag==0)
@@ -852,7 +889,7 @@ int main (int argc, char** argv)
         glfwSwapBuffers(window);
 
         // Poll for Keyboard and mouse events
-        glfwPollEvents();
+      
 
         // Control based on time (Time based transformation like 5 degrees rotation every 0.5s)
         current_time = glfwGetTime(); // Time in seconds
@@ -896,6 +933,22 @@ int main (int argc, char** argv)
 
             last_update_time = current_time;
         }
+      }
+      else if(lives>0)
+      {
+        lives -= 1;
+        stand.resetTranslateRect();
+        scoop.resetBall();
+        scoop.initVelocity(5, 45);
+        movobs[0].resetBall();
+        movobs[0].initBallCentre( 0, -9, 1, 1);
+        movobs[0].initBallColor(1, 0.5, 0);
+        movobs[0].initVelocity(0, 0);
+        turn = 0;
+        canon_shift_dist_x = 0;
+        canon_shift_dist_y = 0;
+        arrow_rotation = 0;
+      }
     }
 
     glfwTerminate();

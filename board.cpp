@@ -4,6 +4,8 @@ class rectangle
 {
 public:
     float l;
+    //float defaultCx;
+   // float defaultCy;
     float b;
     float cenx;
     float ceny;
@@ -18,6 +20,8 @@ public:
       b = brd;
       cenx = x;
       ceny = y;
+    //  defaultCx = x;
+     // defaultCy = y;
       r = rad;
     //  translateX = 0;
      // translateY = 0;
@@ -116,6 +120,13 @@ public:
     {
       return initTime;
     }
+    void resetBall()
+    {
+      basePositionX = cenx;
+      basePositionY = ceny;
+      translateX = 0;
+      translateY = 0;
+    } 
 
     void setbasePositionX(float x)
     {
@@ -269,6 +280,7 @@ public:
           moveFlag = 0;
           turn = 1;
           resetPosition();
+          setballVelocity();
         }
         else
           vx = -1*tmp;
@@ -283,6 +295,7 @@ public:
           moveFlag = 0;
           turn = 1;
           resetPosition();
+          setballVelocity();
         }
         else
           vx = tmp;
@@ -303,10 +316,25 @@ public:
           translateX = tmp;
       }
       else
+      {
         resetPosition();
-
+        setballVelocity();
+      }
 
   //    cout<<"transx: "<<translateX<<endl;
+    }
+
+    /* returns 1 in case no life exists*/
+    bool checkLife()
+    {
+      if(vx==0 && vy==0)
+        return 1;
+
+      else if(abs(basePositionX + translateX)>=12)
+        return 1;
+
+      else
+        return 0;
     }
   
 
