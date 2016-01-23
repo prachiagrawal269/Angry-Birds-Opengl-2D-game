@@ -127,6 +127,16 @@ public:
       basePositionY += y;
     }
 
+    float getCurrCoordinatesX()
+    {
+      return basePositionX + translateX;
+    }
+
+    float getCurrCoordinatesY()
+    {
+      return basePositionY + translateY;
+    }
+
     void resetPosition()
     {
       basePositionX = basePositionX + translateX;
@@ -148,7 +158,7 @@ public:
        {
          vx = vox*res;
          vy = voy*res - vt*(1-res);
-         cout<<"vx: "<<vx<<" "<<"vy: "<<vy<<endl;
+         cout<<"update:: vx: "<<vx<<" "<<"vy: "<<vy<<endl;
        }
     }
 
@@ -167,10 +177,11 @@ public:
 
     }
 
-    void getballVelocity()
+    void setballVelocity()
     {
       velocity = sqrt(vx*vx + vy*vy);
     }
+
 
     float getTheta()
     {
@@ -179,6 +190,15 @@ public:
       theta = (theta*(180))/PI;
       return theta;
     }
+
+    void setTheta()
+    {
+      float theta;
+      theta = atan2(vy, vx);
+      theta = (theta*(180))/PI;
+      angle = theta;
+    }
+
 
     void updateBallPosition()
     {
@@ -190,7 +210,7 @@ public:
       timeElapsed = current_time - t;
 
     //  cout<<"time: "<<timeElapsed<<endl;
-      cout<<"velocity: "<<velocity<<endl;
+   //   cout<<"velocity: "<<velocity<<endl;
       if(velocity==0)
       {
         resetPosition();
@@ -213,7 +233,9 @@ public:
 
     bool checkFriction()
     {
-      if(translateY + basePositionY <=-10)
+      if(!frictionFlag)
+      {
+        if(translateY + basePositionY <=-10+rad)
         {
         //  cout<<"friction identified\n";
           frictionFlag = 1;
@@ -226,6 +248,9 @@ public:
         } 
       else
         return 0;
+      }
+      else
+        return 1;
     }
 
     void initFriction()
@@ -233,27 +258,42 @@ public:
       double timeElapsed, tmp;
       timeElapsed = glfwGetTime() - getinitTime() + 0.01;
 
-      tmp = abs(abs(vox) - (frictionCoefficient*(gravity*timeElapsed)));
+      tmp = abs(vox) - (frictionCoefficient*(gravity*timeElapsed));
       if(vx<0)
       {
         if(vx*(-1*tmp) <0)
+        {
           vx = 0;
+          vy = 0;
+          frictionFlag = 0;
+          moveFlag = 0;
+          turn = 1;
+          resetPosition();
+        }
         else
           vx = -1*tmp;
       }
-      else
+      else if(vx!=0)
       {
         if(vx*tmp <0 )
+        {
           vx = 0;
+          vy = 0;
+          frictionFlag = 0;
+          moveFlag = 0;
+          turn = 1;
+          resetPosition();
+        }
         else
           vx = tmp;
       }
 
     //  cout<<"vtx: "<<vx<<" "<<threshold_velocity<<endl;;
-      if(abs(vx)>threshold_velocity)
+      if(abs(vx)>threshold_velocity && vx!=0)
       {
    //     cout<<"time elap: "<<timeElapsed<<endl;
         tmp = abs(abs(vox*timeElapsed) - ((timeElapsed*timeElapsed)*(gravity*frictionCoefficient))/2); 
+      //  cout<<"tmp: "<<tmp<<endl;
         
      //   cout<<"tx: "<<(timeElapsed*timeElapsed)*(gravity*frictionCoefficient)/2<<" "; 
       //  cout<<vox*timeElapsed<<endl;
@@ -263,7 +303,7 @@ public:
           translateX = tmp;
       }
       else
-        translateX = 0;
+        resetPosition();
 
 
   //    cout<<"transx: "<<translateX<<endl;

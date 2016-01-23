@@ -27,6 +27,7 @@ float camera_rotation_angle = 90;
 float rectangle_rotation = 0;
 float triangle_rotation = 0;
 float arrow_rotation = 0;
+float turn = 0;
 //double theta = 45;
 
 /*float ball_radius = 0.5;
@@ -43,7 +44,7 @@ float threshold_velocity = 0.25;
 bool ball_move_flag = 0; */
 float gravity = 2;
 float airdragConstant = 0.09;
-float frictionCoefficient = 0.3;
+float frictionCoefficient = 0.5;
 
 float vt = gravity/airdragConstant ;
 /*float vox, voy, vx, vy;
