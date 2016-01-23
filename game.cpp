@@ -15,8 +15,8 @@
 
 using namespace std;
 
-float last_position_x = rectangle_cx;
-float last_position_y = rectangle_cy+1+0.5;
+//float last_position_x = rectangle_cx;
+//float last_position_y = rectangle_cy+1+0.5;
 
 struct GLMatrices {
 	glm::mat4 projection;
@@ -194,59 +194,28 @@ void updateBallPosition()
 } */
 
 
-/*check collision with the obstacles*/
-void checkCollision()
+
+
+/*void checkMovableCollision(ball Tool, ball Target)
 {
-  float x, y, r, e;
-  double angle;
-  int i;
-  pair<float, float> p, q;
-  for( i=0; i<Obstacles.size(); i++)
+  float alpha, theta, v;
+  alpha = getAngle(Tool.basePositionX + Tool.translateX, Tool.basePositionY + Tool.translateY, 
+      Target.basePositionX + Target.translateX, Target.basePositionY + Target.translateY);
+
+  theta = Tool.getTheta();
+  theta = DEG2RAD(theta);
+
+  if(theta < PI/2 + alpha && theta > -1*(PI/2) + alpha)
   {
-    p = Obstacles[i].first; // center coordinates
-    x = p.first;
-    y = p.second;
-    q = Obstacles[i].second; // 'e: restitution' and radius
-    r = q.second;
-    e = q.first;
+    
 
-    cout<<"r: "<<r<<"dist: "<<getDIst(scoop.basePositionX + scoop.translateX, scoop.basePositionY + scoop.translateY, x, y)<<endl;
-    if(getDIst(scoop.basePositionX +scoop.translateX, scoop.basePositionY + scoop.translateY, x, y) <= r)
-    {
-
-      cout<<"collided  with obstacle no. "<<i+1<< " ";
-      scoop.resetPosition();
-      cout<<"vx: "<<scoop.vx<< " "<<"vy: "<<scoop.vy<<endl;
-      scoop.angle = scoop.getTheta();
-      cout<<"angle: "<<scoop.angle<<endl;
-      //if(vx>0)
-      if(scoop.vx!=0)
-        scoop.angle = 180 + scoop.angle;
-//      else if(vx==0)
-      else
-        scoop.angle = -1*(scoop.angle);
-      scoop.updateVelocityComponents(e*(scoop.velocity), scoop.angle);
-      cout<<"updated velocity: "<<"vx: "<<scoop.vx<<" "<<"vy: "<<scoop.vy<<endl;
-      scoop.updateBallPosition();
-      if(scoop.vx<0)
-        scoop.translateX -= 0.2;
-      else
-        scoop.translateX += 0.2;
-      if(scoop.vy>0)
-        scoop.translateY += 0.2;
-      else 
-        scoop.translateY -= 0.2;
-      scoop.resetPosition();
-
-        cout<<"translate "<<scoop.translateX<<" "<<scoop.translateY<<endl;
-      
-    }
   }
-}
+
+}*/
 
 /*update velocity as per gravity and air friction
 void updateBallVelocity()
-{
+{-
   double res;
   double current_time, timeElapsed;
   current_time = glfwGetTime();
@@ -376,7 +345,7 @@ void keyboardChar (GLFWwindow* window, unsigned int key)
 }
 
 /* Executed when a mouse button is pressed/released */
-void mouseButton (GLFWwindow* window, int button, int action, int mods)
+/*void mouseButton (GLFWwindow* window, int button, int action, int mods)
 {
     switch (button) {
         case GLFW_MOUSE_BUTTON_LEFT:
@@ -392,7 +361,7 @@ void mouseButton (GLFWwindow* window, int button, int action, int mods)
             break;
     }
 }
-
+ */
 void reshapeWindow (GLFWwindow* window, int width, int height)
 {
     int fbwidth=width, fbheight=height;
@@ -446,7 +415,7 @@ void drawRectangle (rectangle Rect, board::VAO *rectan)
 */
 
 /* function to draw static obstacles on the board */
-void drawObstacle (rectangle Rect, board::VAO *obs)
+/*void drawObstacle (rectangle Rect, board::VAO *obs)
  {
   Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0));
   glm::mat4 VP = Matrices.projection * Matrices.view;
@@ -459,7 +428,7 @@ void drawObstacle (rectangle Rect, board::VAO *obs)
   MVP = VP * Matrices.model;
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
   draw3DObject(obs);
-}
+}*/
 
 /* ball object */
 void drawCircle (board::VAO *circl, ball Ball)
@@ -471,8 +440,8 @@ void drawCircle (board::VAO *circl, ball Ball)
   /* forming circle */
   Matrices.model = glm::mat4(1.0f);
 
-  ball_cx_curr = last_position_x + ball_shift_dist_x;
-  ball_cy_curr = last_position_y + ball_shift_dist_y;
+ // ball_cx_curr = last_position_x + ball_shift_dist_x;
+ // ball_cy_curr = last_position_y + ball_shift_dist_y;
 //  glm::mat4 translateCircle = glm::translate (glm::vec3(last_position_x + ball_shift_dist_x, last_position_y + ball_shift_dist_y, 0));        // glTranslatef
   glm::mat4 translateCircle = glm::translate (glm::vec3(Ball.basePositionX + Ball.translateX, Ball.basePositionY + Ball.translateY, 0));        // glTranslatef
   Matrices.model *= (translateCircle); 
@@ -482,14 +451,14 @@ void drawCircle (board::VAO *circl, ball Ball)
 
 }
 
-void drawMovableObs (board::VAO *circl, ball Ball)
+/*void drawMovableObs (board::VAO *circl, ball Ball)
 {
   
   Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); 
   glm::mat4 VP = Matrices.projection * Matrices.view;
   glm::mat4 MVP; 
 
-  /* forming circle */
+  // forming circle 
   Matrices.model = glm::mat4(1.0f);
 
 //  ball_cx_curr = last_position_x + ball_shift_dist_x;
@@ -500,7 +469,7 @@ void drawMovableObs (board::VAO *circl, ball Ball)
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]); 
   draw3DObject(circl);
 }
-
+*/
 
 void drawArrow (ball Ball)
 {
@@ -541,6 +510,63 @@ void drawGround ()
 
 }
 
+/*check collision with the obstacles*/
+void checkCollision()
+{
+  float x, y, r, e;
+  double angle;
+  int i;
+  pair<float, float> p, q;
+  for( i=0; i<Obstacles.size(); i++)
+  {
+    p = Obstacles[i].first; // center coordinates
+    x = p.first;
+    y = p.second;
+    q = Obstacles[i].second; // 'e: restitution' and radius
+    r = q.second;
+    e = q.first;
+
+   // cout<<"r: "<<r<<"dist: "<<getDIst(scoop.basePositionX + scoop.translateX, scoop.basePositionY + scoop.translateY, x, y)<<endl;
+    if(getDIst(scoop.basePositionX +scoop.translateX, scoop.basePositionY + scoop.translateY, x, y) <= r)
+    {
+
+      cout<<"collided  with obstacle no. "<<i+1<< " ";
+      scoop.resetPosition();
+      cout<<"vx: "<<scoop.vx<< " "<<"vy: "<<scoop.vy<<endl;
+      scoop.angle = scoop.getTheta();
+      cout<<"angle: "<<scoop.angle<<endl;
+      //if(vx>0)
+      if(scoop.vx!=0)
+        scoop.angle = 180 + scoop.angle;
+//      else if(vx==0)
+      else
+        scoop.angle = -1*(scoop.angle);
+      scoop.updateVelocityComponents(e*(scoop.velocity), scoop.angle);
+      cout<<"updated velocity: "<<"vx: "<<scoop.vx<<" "<<"vy: "<<scoop.vy<<endl;
+      scoop.updateBallPosition();
+      if(scoop.vx<0)
+        scoop.translateX -= 0.2;
+      else
+        scoop.translateX += 0.2;
+      if(scoop.vy>0)
+        scoop.translateY += 0.2;
+      else 
+        scoop.translateY -= 0.2;
+      scoop.resetPosition();
+   //   cout<<scoop.basePositionX<<" "<<scoop.basePositionY<<endl;
+   //   drawCircle(circle, scoop);
+
+       // cout<<"translate "<<scoop.translateX<<" "<<scoop.translateY<<endl;
+      
+    }
+  }
+}
+
+float getAngle(float x1, float y1, float x2, float y2)
+{
+  return atan2(y2-y1, x2-x1);
+}
+
 /* create speed bar */
 void CreateSpeedBar()
 {
@@ -549,7 +575,7 @@ void CreateSpeedBar()
    {
       speedBar[i].initRect(1, 1.5, -10, 0.7*(i+1), 0.9);
       speedBar[i].initRectColor(float(i)/10, 1-(float(i)/10), 0);
-      speed_bar[i-1] = myboard.createRectangle(1, 1.5, float(i)/10, 1-(float(i)/10), 0);
+      speed_bar[i-1] = myboard.createRectangle(speedBar[i]);
     }
 }
 
@@ -593,7 +619,7 @@ GLFWwindow* initGLFW (int width, int height)
     glfwSetWindowCloseCallback(window, quit);
     glfwSetKeyCallback(window, keyboard);      
     glfwSetCharCallback(window, keyboardChar); 
-    glfwSetMouseButtonCallback(window, mouseButton);  
+//    glfwSetMouseButtonCallback(window, mouseButton);  
 
     return window;
 }
@@ -606,7 +632,7 @@ void initGL (GLFWwindow* window, int width, int height)
   stand.initRect(2, 2, -9, -9, 1.44);
   stand.initRectColor(1, 0, 0);
   stand.resetTranslateRect();
-	rect = myboard.createRectangle (2, 2, 1, 0, 0);
+	rect = myboard.createRectangle (stand);
   Obstacles.push_back(make_pair(make_pair(-9, -9), make_pair(0.5, 1.44)));
 
  // ball_radius = 0.5;
@@ -615,10 +641,19 @@ void initGL (GLFWwindow* window, int width, int height)
   scoop.initBallCentre(-9, -7.5, 0.5, 1);
   scoop.initBallColor(0, 0, 1);
   scoop.initVelocity(5, 45);
-  circle = myboard.createCircle (scoop.rad, scoop.bColor[0], scoop.bColor[1], scoop.bColor[2]);
+  
+// creating movable obstacles
+  movobs[0].initBallCentre( 0, -9, 1, 1);
+  movobs[0].initBallColor(1, 0.5, 0);
+  movobs[0].initVelocity(0, 0);
+
+  //circle = myboard.createCircle (scoop.rad, scoop.bColor[0], scoop.bColor[1], scoop.bColor[2]);
+  circle = myboard.createCircle (scoop);
+  obsMovable = myboard.createCircle(movobs[0]);
+
   arrow = myboard.createArrow ();
   ground = myboard.createGround ();
-  obsMovable = myboard.createCircle (1, 1, 0.75, 0);
+ // obsMovable = myboard.createCircle (1, 1, 0.75, 0);
 
 
   CreateSpeedBar();
@@ -631,16 +666,22 @@ void initGL (GLFWwindow* window, int width, int height)
   /*creating obstacles on the board*/
   //for(int i=0; i<3; i++)
   //{
-    obstacle[1] = myboard.createObstacle(1, 4, 1, 0, 1, -5.5, -8, 0.5);
-    obstacle[2] = myboard.createObstacle(3, 6, 1, 0.5, 0.5, 3.5, -7, 0.5);
-	
+
+
+    // obstacles creation
     obst[1].initRect(1, 4, -5.5, -8, 0.5);
     obst[1].resetTranslateRect();
+    obst[1].initRectColor(1, 0.5, 0.5);
 
     obst[2].initRect(3, 6, 3.5, -7, 0.5);
     obst[2].resetTranslateRect();
+    obst[2].initRectColor(0.5, 1, 0.5);
 
-  programID = LoadShaders( "game.vert", "game.frag" );
+    obstacle[1] = myboard.createObstacle( obst[1], 0.5);
+    obstacle[2] = myboard.createObstacle( obst[2], 1);
+	
+
+    programID = LoadShaders( "game.vert", "game.frag" );
 	Matrices.MatrixID = glGetUniformLocation(programID, "MVP");
 
   scoop.updateVelocityComponents(scoop.velocity, 45);
@@ -698,7 +739,7 @@ int main (int argc, char** argv)
         for(int i=1 ; i<Obstacles.size(); i++)
         {
          // p = Obstacles[i].first;         
-          drawObstacle(obst[i], obstacle[i]);
+          drawRectangle(obst[i], obstacle[i]);
         }
 
 
@@ -711,6 +752,7 @@ int main (int argc, char** argv)
         DrawSpeedBar(scoop.velocity);
 
         drawCircle(circle, scoop);
+        drawCircle(obsMovable, movobs[0]);
       //  drawMovableObs (obsMovable, -1, -9);
         if(scoop.moveFlag==0)
           drawArrow(scoop);
@@ -736,7 +778,7 @@ int main (int argc, char** argv)
           /* move the ball */
            if(scoop.moveFlag==1 && scoop.frictionFlag ==0 )
             {
-              cout<<"bal movement\n";
+//              cout<<"bal movement\n";
               scoop.updateBallPosition();
             }
           /* applying ground friction on the ball*/
