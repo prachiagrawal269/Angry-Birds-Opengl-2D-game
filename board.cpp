@@ -90,6 +90,8 @@ public:
       moveFlag = 0;
       isMovable = move;
       frictionFlag = 0;
+      velocity = 0;
+      angle =0;
     }
 
     void initBallColor(float c1, float c2, float c3)
@@ -193,6 +195,10 @@ public:
       velocity = sqrt(vx*vx + vy*vy);
     }
 
+    float getballVelocity()
+    {
+      return sqrt(vx*vx + vy*vy);
+    }
 
     float getTheta()
     {
@@ -222,12 +228,12 @@ public:
 
     //  cout<<"time: "<<timeElapsed<<endl;
    //   cout<<"velocity: "<<velocity<<endl;
-      if(velocity==0)
+  /*  if(velocity==0)
       {
         resetPosition();
       }
       else
-      {
+      { */
         res = exp (-1*((gravity*timeElapsed)/vt)); 
         translateX = ((vox*vt)/gravity)*(1 - res);
         translateY = ((voy+vt)*(vt/gravity))*(1-res) - (vt*timeElapsed);
@@ -239,14 +245,14 @@ public:
           friction = 1;
           velocityFriction = vx;
         } */
-      }
+  //    }
     }
 
     bool checkFriction()
     {
       if(!frictionFlag)
       {
-        if(translateY + basePositionY <=-10+rad)
+        if(abs(vy)<=threshold_velocity && translateY + basePositionY <=-10+rad)
         {
         //  cout<<"friction identified\n";
           frictionFlag = 1;
@@ -497,6 +503,26 @@ VAO* createCircle (ball Ball)
 
    return create3DObject(GL_TRIANGLE_FAN, 360, vertex_buffer_data, color_buffer_data, GL_FILL);
    
+}
+
+VAO* createOval (float a, float b, ball Ball)
+{
+  GLfloat* vertex_buffer_data = new GLfloat [3*360];
+  GLfloat* color_buffer_data = new GLfloat [3*360];
+  
+   for(int i=0 ; i<360 ; i++) {
+      vertex_buffer_data [3*i] = (a * cos(DEG2RAD(i))) ;
+      vertex_buffer_data [3*i + 1] = (b * sin(DEG2RAD(i)));
+      vertex_buffer_data [3*i + 2] = 0;
+
+      color_buffer_data [3*i] = Ball.bColor[0];
+      color_buffer_data [3*i + 1] = Ball.bColor[1];
+      color_buffer_data [3*i + 2] = Ball.bColor[2];
+
+   }
+
+   return create3DObject(GL_TRIANGLE_FAN, 360, vertex_buffer_data, color_buffer_data, GL_FILL);
+
 }
 
 VAO* createArrow ()
