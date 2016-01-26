@@ -29,7 +29,8 @@ GLuint programID;
 board myboard;
 ball scoop, movobs[3], melt, table, cone, cartop, carWheel[2];
 rectangle obst[4], speedBar[11], background[13], tablestd, lifeBar[4], car, innercar;
-line lines[13];
+line lines[13], wheel[9];
+float rotAmount=0;
 
 int lives = 3;
 float zoom = 1;
@@ -156,167 +157,9 @@ void draw3DObject (board::VAO* vao)
     glDrawArrays(vao->PrimitiveMode, 0, vao->NumVertices); // Starting from vertex 0; 3 vertices total -> 1 triangle
 }
 
-/* Prefered for Keyboard events */
-void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-     // Function is called first on GLFW_PRESS.
-
-    if (action == GLFW_RELEASE) {
-        switch (key) {
-            case GLFW_KEY_L:
-              if(canon_shift_dist_x > -2)
-              {
-                canon_shift_dist_x -= 0.25; 
-                scoop.setbasePositionX(-0.25);
-                car.rectTranslateX(-0.25);
-                innercar.rectTranslateX(-0.25);
-                cartop.setbasePositionX(-0.25);
-                carWheel[0].setbasePositionX(-0.25);
-                carWheel[1].setbasePositionX(-0.25);
-
-             //   last_position_x = rectangle_cx + canon_shift_dist_x;
-              }               
-             break;
-
-            case GLFW_KEY_R:
-              if(canon_shift_dist_x < 20)
-              {
-                canon_shift_dist_x += 0.25;
-                scoop.setbasePositionX(0.25);
-                car.rectTranslateX(0.25);
-                innercar.rectTranslateX(0.25);
-                cartop.setbasePositionX(+0.25);
-                carWheel[0].setbasePositionX(+0.25);
-                carWheel[1].setbasePositionX(+0.25);
-               // last_position_x = rectangle_cx + canon_shift_dist_x;
-              }  
-              break;
-
-            case GLFW_KEY_RIGHT:
-              pan += 1;
-
-            break;
-
-            case GLFW_KEY_LEFT:
-              pan -= 1;
-
-            break;
-
-            case GLFW_KEY_UP:
-              zoom -= 0.1;
-            //  cout<<"up\n";
-              break;
-
-            case GLFW_KEY_DOWN:
-              zoom += 0.1;
-              break;
-
-            case GLFW_KEY_F:
-              if(scoop.velocity<10)
-                scoop.velocity += 1;
-              break;
-
-            case GLFW_KEY_S:
-              if(scoop.velocity>=1)
-                scoop.velocity -= 1;
-              break;
-
-            case GLFW_KEY_SPACE:
-              if(scoop.moveFlag==0)
-              {
-                //resetLastPosition();
-                //  vox = ball_velocity*cos(DEG2RAD(theta));
-                 // voy = ball_velocity*sin(DEG2RAD(theta));
-                  scoop.resetPosition();
-                  scoop.moveFlag = 1;
-                  scoop.setinitTime();
-                 // ball_Inittime = glfwGetTime();
-              }
-              break;
-
-            /* theta is not in radians anywhere*/
-            case GLFW_KEY_A:
-                if(arrow_rotation < 45)
-                  arrow_rotation += 5;
-                scoop.angle = arrow_rotation + 45;
-                break;
-
-            case GLFW_KEY_B:
-                if(arrow_rotation > -45)
-                  arrow_rotation -= 5;
-                scoop.angle = arrow_rotation + 45;
-                break;
-            default: 
-                break;
-        }
-    }
-    else if (action == GLFW_PRESS) {
-        switch (key) {
-            case GLFW_KEY_ESCAPE:
-                quit(window);
-                break;
-            default:
-                break;
-        }
-    }
-}
-
-/* Executed for character input (like in text boxes) */
-void keyboardChar (GLFWwindow* window, unsigned int key)
-{
-	switch (key) {
-		case 'Q':
-		case 'q':
-            quit(window);
-            break;
-		default:
-			break;
-	}
-}
-
-/* Executed when a mouse button is pressed/released */
-void mouseButton (GLFWwindow* window, int button, int action, int mods)
-{
-    switch (button) {
-/*        case GLFW_MOUSE_BUTTON_LEFT:
-            if (action == GLFW_RELEASE)
-                triangle_rot_dir *= -1;
-            break; 
-        case GLFW_MOUSE_BUTTON_RIGHT:
-            if (action == GLFW_PRESS) {
-                glfwGetMousePos(&mouseX, &mouseY);
-                if(mouseX - lastmouseX > 0)
-                {
-                  lastmouseX = mouseX;
-                  lastmouseY = mouseY;
-                  pan += 1;
-                }
-            }
-            break;
-        default:
-            break; */
-    }
-}
-
-void scrollCallback(GLFWwindow* window, double x, double y)
-{
-    zoom += float(y)/4;
-
-    if(zoom < 0)
-      zoom = 0;
-}
- 
-void reshapeWindow (GLFWwindow* window, int width, int height)
-{
-    int fbwidth=width, fbheight=height;
-    glfwGetFramebufferSize(window, &fbwidth, &fbheight);
-	  GLfloat fov = 90.0f;
-	  glViewport (0, 0, (GLsizei) fbwidth, (GLsizei) fbheight);
-    // Ortho projection for 2D views
-}
-
 board::VAO *triangle, *rect , *circle, *arrow, *ground, *obstacle[10], *obsMovable, *speed_bar[11], *background_c[13],
- *icecreamMelt, *tabletop, *tablestand, *tableline, *life_bar[4], *conetop, *conebase, *coneline[7], *carVao, *cartopVao, *carWheelVao[3], *innercarVao;
+ *icecreamMelt, *tabletop, *tablestand, *tableline, *life_bar[4], *conetop, *conebase, *coneline[7], *carVao, *cartopVao,
+ *wheelline[9], *carWheelVao[3], *innercarVao, *carcone;
 
 void draw ()
 {
@@ -329,7 +172,7 @@ void draw ()
 }
 
 
-void drawTriangle (int x, int y)
+void drawTriangle (int x, int y, board::VAO *trian, float transX, float ang)
 {
   Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); // Fixed camera for 2D (ortho) in XY plane
   glm::mat4 VP = Matrices.projection * Matrices.view;
@@ -337,11 +180,13 @@ void drawTriangle (int x, int y)
 
   Matrices.model = glm::mat4(1.0f);
 
-  glm::mat4 translateRectangle = glm::translate (glm::vec3(x, y, 0));        // glTranslatef
-  Matrices.model *= (translateRectangle); 
+  glm::mat4 translateTriangle = glm::translate (glm::vec3(x + transX, y, 0));        // glTranslatef
+  glm::mat4 rotateTriangle = glm::rotate((float)(ang), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
+  glm::mat4 triangleTransform = translateTriangle * rotateTriangle;
+  Matrices.model *= (triangleTransform); 
   MVP = VP * Matrices.model;
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-  draw3DObject(conebase);
+  draw3DObject(trian);
 }
 
 void drawRectangle (rectangle Rect, board::VAO *rectan)
@@ -405,8 +250,9 @@ void drawLine (board::VAO *lin, line Line)
 
   Matrices.model = glm::mat4(1.0f);
 
-  glm::mat4 translateArrow = glm::translate (glm::vec3(0, 0, 0));        
-  glm::mat4 arrowTransform = translateArrow ;
+  glm::mat4 translateArrow = glm::translate (glm::vec3 (Line.cenx + Line.translateX, Line.ceny + Line.translateY, 0));        
+  glm::mat4 rotateArrow = glm::rotate((float)(Line.rotationAngle), glm::vec3(0,0,1)); // rotate about vector (-1,1,1) */
+  glm::mat4 arrowTransform = translateArrow * rotateArrow;
   Matrices.model *= ( arrowTransform ); 
   MVP = VP * Matrices.model;
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
@@ -525,7 +371,7 @@ void checkCollision()
     if(getDIst(scoop.basePositionX +scoop.translateX, scoop.basePositionY + scoop.translateY, x, y) <= r )
     {
 
-      cout<<"collided  with obstacle no. "<<i+1<< " ";
+      //cout<<"collided  with obstacle no. "<<i+1<< " ";
       scoop.resetPosition();
    //   cout<<"vx: "<<scoop.vx<< " "<<"vy: "<<scoop.vy<<endl;
       scoop.angle = scoop.getTheta();
@@ -535,14 +381,14 @@ void checkCollision()
 
         alpha = getAngle(scoop.basePositionX + scoop.translateX, scoop.basePositionY + scoop.translateY, x, y);
       
-      cout<<(180*theta)/PI<<" "<<(180*alpha)/PI<<endl;
+     // cout<<(180*theta)/PI<<" "<<(180*alpha)/PI<<endl;
      // cout<<"sv: "<<scoop.velocity<<endl;
       vel = getDIst(scoop.velocity*sin(theta-alpha), (e*scoop.velocity)*cos(theta-alpha), 0, 0);
    
       angleDash = atan2(e, tan(theta-alpha));
 
       scoop.updateVelocityComponents(vel, angleDash);
-      cout<<"updated velocity: "<<"vx: "<<scoop.vx<<" "<<"vy: "<<scoop.vy<<endl;
+     // cout<<"updated velocity: "<<"vx: "<<scoop.vx<<" "<<"vy: "<<scoop.vy<<endl;
       scoop.updateBallPosition();
       if(scoop.vx<0)
         scoop.translateX -= 0.2;
@@ -566,7 +412,7 @@ void checkWallCollision()
     if(12-scoop.getCurrCoordinatesY()<=scoop.rad || 10+scoop.getCurrCoordinatesY()<=scoop.rad)
     {
       scoop.resetPosition();
-      cout<<"wall collision detected\n";
+     // cout<<"wall collision detected\n";
       scoop.vy = (-0.5)*scoop.vy;
       b = atan2(scoop.vy, scoop.vx);
       b = (180*b)/PI;
@@ -593,7 +439,7 @@ bool checkTarget()
     if(scoop.getCurrCoordinatesY()>=-6.5 && scoop.getCurrCoordinatesY()<=-5.5)
     {
       cout<<scoop.getCurrCoordinatesX()<<" "<<scoop.getCurrCoordinatesY()<<endl;
-      cout<<"Target hit\n";
+      //cout<<"Target hit\n";
       score += (scoop.rad)/(scoop.defaultRad)*10;
       cout<<"score: "<<score<<endl;
       scoop.moveFlag = 0;
@@ -617,20 +463,20 @@ void CreateGradientBackground()
 {
   int c, k, z, j;
   float diff, a1, a2, b1, b2, pp;
-  a1 = 0.5;
-  a1 = 1;
+  a1 = 0.2;
+  a2 = 1;
   b1 = 1;
   b2 = 0.8;
     
   pp = 4 - lives;
   c = 0;
-  diff = float(0.2)/(2*pp-1);
+  diff = float(0.3)/(2*pp-1);
 
   k=0;
   for(z=0; z<2*pp; z++)
   {
     background[c].initRect(24, 2, 0, 11-2*z, 12);
-    background[c].initRectColor(1, 0.8 + k*diff, 0);
+    background[c].initRectColor(1, 0.6 + k*diff, 0);
     background_c[c] = myboard.createRectangle(background[c]); 
     c++;
     k++;
@@ -668,7 +514,7 @@ void CreateSpeedBar()
 
    for(int i=1; i<11; i++)
    {
-      speedBar[i].initRect(1, 1.5, -10, 0.7*(i+1)+2, 0.9);
+      speedBar[i].initRect(1, 1.5, -11, 0.7*(i+1), 0.9);
       speedBar[i].initRectColor(float(i)/10, 1-(float(i)/10), 0);
       speed_bar[i-1] = myboard.createRectangle(speedBar[i]);
     }
@@ -688,7 +534,7 @@ void CreateLifeBar()
 
    for(int i=1; i<4; i++)
    {
-      lifeBar[i].initRect(1, 0.9, -1*(i+8), 11.2, 0.9);
+      lifeBar[i].initRect(1, 0.9, -1*(i+8), 9.3, 0.9);
       lifeBar[i].initRectColor(1 - (i-1)*0.1, 0.0, 0.0);
       life_bar[i-1] = myboard.createRectangle(lifeBar[i]);
     }
@@ -704,6 +550,328 @@ void DrawLifeBar ()
 } 
 
 
+void initLineCone()
+{
+ /* slant lines over the target cone*/
+  for(int i=0; i<7; i++)
+    lines[i].initLineColors(0, 0, 0);
+
+  float lineVer[6]  = {7.875, -7, 0, 8.7, -6, 0};
+  lines[0].initLineVertices(lineVer);
+
+  float lineVer1[6] = {8.250, -8, 0, 9.9, -6, 0};
+  lines[1].initLineVertices(lineVer1);
+
+  float lineVer2[6] = {8.675, -9, 0, 9.85, -7.55, 0};
+  lines[2].initLineVertices(lineVer2);
+
+  float lineVer3[6] = {8.7, -6, 0, 9.85, -7.55, 0};
+  lines[3].initLineVertices(lineVer3);
+
+  float lineVer4[6] = {7.67, -6, 0, 9.55, -8.5, 0};
+  lines[4].initLineVertices(lineVer4);
+  
+  float lineVer5[6] = {8.25, -8, 0, 9.225, -9.4, 0};
+  lines[5].initLineVertices(lineVer5);
+
+  float lineVer6[6] = {10.3, -6.5, 0, 9.9, -6, 0};
+  lines[6].initLineVertices(lineVer6);
+
+  for(int i=0; i<7; i++)
+    coneline[i] = myboard.createLine(lines[i]);
+
+}
+
+void resetSpokes()
+{
+       for(int i=0; i<8; i++)
+          wheel[i].setRotationAngle(0);
+
+        for(int i=0; i<2; i++)
+        {
+          wheel[4*i].initCentre(-7, -9.3);
+          wheel[4*i+1].initCentre(-7, -9.3);
+        }
+
+        for(int i=0; i<2; i++)
+        {
+          wheel[4*i+2].initCentre(-9, -9.3);
+          wheel[4*i+3].initCentre(-9, -9.3);
+        }
+
+        //cout<<"resetting sizes\n";
+        for(int i=0; i<8; i++)
+        {
+           wheel[i].resetTranslation();
+           wheel[i].initLineColors(0.7, 0.7, 0.7);
+           wheelline[i] = myboard.createLine(wheel[i]);
+        }
+}
+
+void initCar()
+{
+ 
+
+  car.initRect(4, 3, -8, -7.75, 5);
+  car.initRectColor(1, 0.4, 0.7);
+  car.resetTranslateRect();
+
+  carVao = myboard.createRectangle(car);
+
+  innercar.initRect(3, 2, -8, -7.75, 3.5);
+  innercar.initRectColor(1, 1, 0.8);
+  innercar.resetTranslateRect();
+
+  innercarVao = myboard.createRectangle(innercar);
+
+  /*drawing wheels of the icecream car*/
+  carWheel[0].initBallCentre( -7, -9.3, 0.7, 1);
+  carWheel[0].initBallColor(0.15, 0.15, 0.15);
+  carWheel[0].initVelocity(0, 0);
+
+  carWheelVao[0] = myboard.createCircle(carWheel[0], 1);
+
+  carWheel[1].initBallCentre( -9, -9.3, 0.7, 1);
+  carWheel[1].initBallColor(0.15, 0.15, 0.15);
+  carWheel[1].initVelocity(0, 0);
+
+  carWheelVao[1] = myboard.createCircle(carWheel[1], 1);
+
+  /* cartop semicircle */
+  cartop.initBallCentre( -8, -6.25, 2.25, 1);
+  cartop.initBallColor(1, 0.8, 0);
+  cartop.initVelocity(0, 0);
+  cartop.ratioAlter(0.5);
+
+  cartopVao = myboard.createSemiCircle(cartop);
+
+  /*spokes of wheels*/
+
+  float lineVer[6]  = {0.4, 0.4, 0, -0.4, -0.4, 0};
+  wheel[0].initLineVertices(lineVer);
+
+  float lineVer1[6]  = {0.4, 0.4, 0, -0.4, -0.4, 0};
+  wheel[2].initLineVertices(lineVer1);
+  
+  float lineVer2[6]  = {-0.4, 0.4, 0, 0.4, -0.4, 0};
+  wheel[1].initLineVertices(lineVer2);
+  
+  float lineVer3[6]  = {-0.4, 0.4, 0, 0.4, -0.4, 0};
+  wheel[3].initLineVertices(lineVer3);
+
+  float lineVer4[6]  = {0.6, 0, 0, -0.6, 0, 0};
+  wheel[4].initLineVertices(lineVer4);
+
+  float lineVer5[6]  = {0, -0.6, 0, 0, 0.6, 0};
+  wheel[5].initLineVertices(lineVer5);
+
+  float lineVer6[6]  = {0.6, 0, 0, -0.6, 0, 0};
+  wheel[6].initLineVertices(lineVer6);
+
+  float lineVer7[6]  = {0, -0.6, 0, 0, 0.6, 0};
+  wheel[7].initLineVertices(lineVer7);
+
+  resetSpokes();
+ 
+}
+
+void setscoopCone()
+{
+    
+  float scoopConeVer[10], scoopConeCol[10];
+
+  myboard.setTriangleVertices(-8.35 + 8 , -3.65 + 4, 0, 0, scoopConeVer);
+  myboard.setTriangleVertices( -7.65 +8, -4.35 +4, 0, 1, scoopConeVer);
+  myboard.setTriangleVertices(-9 +8, -5 +4 , 0, 2, scoopConeVer);
+
+  myboard.setTriangleColors( 0.6, 0.4, 0, 0, scoopConeCol);
+  myboard.setTriangleColors( 0.6, 0.4, 0, 1, scoopConeCol);
+  myboard.setTriangleColors( 0.6, 0.4, 0,  2, scoopConeCol);
+  
+  carcone = myboard.createTriangle(scoopConeVer, scoopConeCol);
+
+}
+
+/* Prefered for Keyboard events */
+void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+     // Function is called first on GLFW_PRESS.
+
+    if (action == GLFW_RELEASE) {
+        switch (key) {
+            case GLFW_KEY_L:
+              if(canon_shift_dist_x > -2)
+              {
+                canon_shift_dist_x -= 0.25; 
+                scoop.setbasePositionX(-0.25);
+                car.rectTranslateX(-0.25);
+                innercar.rectTranslateX(-0.25);
+                cartop.setbasePositionX(-0.25);
+                carWheel[0].setbasePositionX(-0.25);
+                carWheel[1].setbasePositionX(-0.25);
+
+                for(int i=0; i<8; i++)
+                {
+                  wheel[i].rotationAngle = 2*PI - canon_shift_dist_x/carWheel[0].rad;
+                  wheel[i].lineTranslateX(-0.25);
+                }
+             //   last_position_x = rectangle_cx + canon_shift_dist_x;
+              }               
+             break;
+
+            case GLFW_KEY_R:
+              if(canon_shift_dist_x < 2)
+              {
+                canon_shift_dist_x += 0.25;
+                scoop.setbasePositionX(0.25);
+                car.rectTranslateX(0.25);
+                innercar.rectTranslateX(0.25);
+                cartop.setbasePositionX(+0.25);
+                carWheel[0].setbasePositionX(+0.25);
+                carWheel[1].setbasePositionX(+0.25);
+                
+                for(int i=0; i<8; i++)
+                {
+                  wheel[i].rotationAngle = 2*PI - canon_shift_dist_x/carWheel[0].rad;
+                  wheel[i].lineTranslateX(0.25);
+                }
+
+               // last_position_x = rectangle_cx + canon_shift_dist_x;
+              }  
+              break;
+
+            case GLFW_KEY_RIGHT:
+              pan += 1;
+
+            break;
+
+            case GLFW_KEY_LEFT:
+              pan -= 1;
+
+            break;
+
+            case GLFW_KEY_UP:
+              zoom -= 0.1;
+            //  cout<<"up\n";
+              break;
+
+            case GLFW_KEY_DOWN:
+              zoom += 0.1;
+              break;
+
+            case GLFW_KEY_F:
+              if(scoop.velocity<10)
+                scoop.velocity += 1;
+              break;
+
+            case GLFW_KEY_S:
+              if(scoop.velocity>=1)
+                scoop.velocity -= 1;
+              break;
+
+            case GLFW_KEY_SPACE:
+              if(scoop.moveFlag==0)
+              {
+                //resetLastPosition();
+                //  vox = ball_velocity*cos(DEG2RAD(theta));
+                 // voy = ball_velocity*sin(DEG2RAD(theta));
+                  scoop.resetPosition();
+                  scoop.moveFlag = 1;
+                  scoop.setinitTime();
+                 // ball_Inittime = glfwGetTime();
+              }
+              break;
+
+            /* theta is not in radians anywhere*/
+            case GLFW_KEY_A:
+                if(arrow_rotation < 45)
+                {
+                  arrow_rotation += 5;
+                  rotAmount += 5;
+                }
+                scoop.angle = arrow_rotation + 45;
+                
+                setscoopCone();
+                break;
+
+            case GLFW_KEY_B:
+                if(arrow_rotation > -50)
+                {
+                  arrow_rotation -= 5;
+                  rotAmount -= 5;
+                }
+                scoop.angle = arrow_rotation + 45;
+                //rotAmount -= 5;
+                setscoopCone();
+                break;
+            default: 
+                break;
+        }
+    }
+    else if (action == GLFW_PRESS) {
+        switch (key) {
+            case GLFW_KEY_ESCAPE:
+                quit(window);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+/* Executed for character input (like in text boxes) */
+void keyboardChar (GLFWwindow* window, unsigned int key)
+{
+  switch (key) {
+    case 'Q':
+    case 'q':
+            quit(window);
+            break;
+    default:
+      break;
+  }
+}
+
+/* Executed when a mouse button is pressed/released */
+void mouseButton (GLFWwindow* window, int button, int action, int mods)
+{
+    switch (button) {
+/*        case GLFW_MOUSE_BUTTON_LEFT:
+            if (action == GLFW_RELEASE)
+                triangle_rot_dir *= -1;
+            break; 
+        case GLFW_MOUSE_BUTTON_RIGHT:
+            if (action == GLFW_PRESS) {
+                glfwGetMousePos(&mouseX, &mouseY);
+                if(mouseX - lastmouseX > 0)
+                {
+                  lastmouseX = mouseX;
+                  lastmouseY = mouseY;
+                  pan += 1;
+                }
+            }
+            break;
+        default:
+            break; */
+    }
+}
+
+void scrollCallback(GLFWwindow* window, double x, double y)
+{
+    zoom += float(y)/4;
+
+    if(zoom < 0)
+      zoom = 0;
+}
+ 
+void reshapeWindow (GLFWwindow* window, int width, int height)
+{
+    int fbwidth=width, fbheight=height;
+    glfwGetFramebufferSize(window, &fbwidth, &fbheight);
+    GLfloat fov = 90.0f;
+    glViewport (0, 0, (GLsizei) fbwidth, (GLsizei) fbheight);
+    // Ortho projection for 2D views
+}
 
 GLFWwindow* initGLFW (int width, int height)
 {
@@ -748,77 +916,6 @@ GLFWwindow* initGLFW (int width, int height)
 
     return window;
 }
-void initLineCone()
-{
- /* slant lines over the target cone*/
-  for(int i=0; i<7; i++)
-    lines[i].initLineColors(0, 0, 0);
-
-  float lineVer[6]  = {7.875, -7, 0, 8.7, -6, 0};
-  lines[0].initLineVertices(lineVer);
-
-  float lineVer1[6] = {8.250, -8, 0, 9.9, -6, 0};
-  lines[1].initLineVertices(lineVer1);
-
-  float lineVer2[6] = {8.675, -9, 0, 9.85, -7.55, 0};
-  lines[2].initLineVertices(lineVer2);
-
-  float lineVer3[6] = {8.7, -6, 0, 9.85, -7.55, 0};
-  lines[3].initLineVertices(lineVer3);
-  
-  float lineVer4[6] = {7.67, -6, 0, 9.55, -8.5, 0};
-  lines[4].initLineVertices(lineVer4);
-
-  float lineVer5[6] = {8.25, -8, 0, 9.225, -9.4, 0};
-  lines[5].initLineVertices(lineVer5);
-
-  float lineVer6[6] = {10.3, -6.5, 0, 9.9, -6, 0};
-  lines[6].initLineVertices(lineVer6);
-
-
-
-  for(int i=0; i<7; i++)
-    coneline[i] = myboard.createLine(lines[i]);
-
-}
-
-void initCar()
-{
-  car.initRect(4, 3, -8, -7.75, 5);
-  car.initRectColor(1, 0.4, 0.7);
-  car.resetTranslateRect();
-
-  carVao = myboard.createRectangle(car);
-
-  innercar.initRect(3, 2, -8, -7.75, 3.5);
-  innercar.initRectColor(1, 1, 0.8);
-  innercar.resetTranslateRect();
-
-  innercarVao = myboard.createRectangle(innercar);
-
-  /*drawing wheels of the icecream car*/
-  carWheel[0].initBallCentre( -7, -9.3, 0.7, 1);
-  carWheel[0].initBallColor(0.15, 0.15, 0.15);
-  carWheel[0].initVelocity(0, 0);
-
-  carWheelVao[0] = myboard.createCircle(carWheel[0], 1);
-
-  carWheel[1].initBallCentre( -9, -9.3, 0.7, 1);
-  carWheel[1].initBallColor(0.15, 0.15, 0.15);
-  carWheel[1].initVelocity(0, 0);
-
-  carWheelVao[1] = myboard.createCircle(carWheel[1], 1);
-
-  /* cartop semicircle */
-  cartop.initBallCentre( -8, -6.25, 2.25, 1);
-  cartop.initBallColor(1, 0.8, 0);
-  cartop.initVelocity(0, 0);
-  cartop.ratioAlter(0.5);
-
-  cartopVao = myboard.createSemiCircle(cartop);
-
-
-}
 
 /* Add all the models to be created here */
 void initGL (GLFWwindow* window, int width, int height)
@@ -826,19 +923,21 @@ void initGL (GLFWwindow* window, int width, int height)
     /* Objects should be created before any other gl function and shaders */
   // ball_velocity = 5;
   float ver[10], col[10];
+
   initCar();
+  setscoopCone();
  /* stand.initRect(2, 2, -9, -9, 1.44);
   stand.initRectColor(1, 0, 0);
   stand.resetTranslateRect();
 	rect = myboard.createRectangle (stand); */
   Obstacles.push_back(make_pair(make_pair(-9, -9), make_pair(0.5, 1.44)));
 
-  scoop.initBallCentre(-9, -7.5, 0.5, 1);
-  scoop.initBallColor(0, 0, 1);
+  scoop.initBallCentre(-8, -4, 0.5, 1);
+  scoop.initBallColor(0.3, 0.22, 0.55);
   scoop.initVelocity(5, 45);
   
  // creating movable obstacles
-  movobs[0].initBallCentre( -3, -9, 1, 1);
+  movobs[0].initBallCentre( -2, -9, 1, 1);
   movobs[0].initBallColor(1, 0.5, 0);
   movobs[0].initVelocity(0, 0);
 
@@ -938,10 +1037,16 @@ int main (int argc, char** argv)
         /*draw target*/
         // oval and triangle
         drawCircle(conetop, cone);
-        drawTriangle(9, -8);
+        drawTriangle(9, -8, conebase, 0, 0);
+        drawTriangle(-8 , -4 , carcone, canon_shift_dist_x, DEG2RAD(rotAmount));
 
+        /*slane lines over the target cone*/
         for(int i=0; i<7; i++)
           drawLine(coneline[i], lines[i]);
+
+        /*spokes on the wheel*/
+        for(int i=0; i<8; i++)
+          drawLine(wheelline[i], wheel[i]);
 
         /*ensure that there is still life*/
         if(lives>0 && scoop.checkLife()==0 && checkTarget()!=1)
@@ -1006,8 +1111,8 @@ int main (int argc, char** argv)
         drawCircle(circle, scoop);
         drawCircle(obsMovable, movobs[0]);
       //  drawMovableObs (obsMovable, -1, -9);
-        if(scoop.moveFlag==0 && turn==0)
-          drawArrow(scoop);
+     //   if(scoop.moveFlag==0 && turn==0)
+       //   drawArrow(scoop);
 
         glfwSwapBuffers(window);
 
@@ -1044,8 +1149,8 @@ int main (int argc, char** argv)
       {
         cout<<"new life\n";
         lives -= 1;
-        scoop.initBallCentre(-9, -7.5, 0.5, 1);
-        scoop.initBallColor(0, 0, 1);
+        scoop.initBallCentre(-8, -4, 0.5, 1);
+        scoop.initBallColor(0.3, 0.22, 0.55);
         scoop.initVelocity(5, 45);
         circle = myboard.createCircle (scoop, 1);
         CreateGradientBackground();
@@ -1057,15 +1162,21 @@ int main (int argc, char** argv)
         carWheel[0].resetBall();
         carWheel[1].resetBall();
         movobs[0].resetBall();
-        movobs[0].initBallCentre( 0, -9, 1, 1);
+        movobs[0].initBallCentre( -2, -9, 1, 1);
         movobs[0].initBallColor(1, 0.5, 0);
         movobs[0].initVelocity(0, 0);
+//        obsMovable = myboard.createCircle(movobs[0], 1);
+
         turn = 0;
         melt.moveFlag=1;
         canon_shift_dist_x = 0;
         canon_shift_dist_y = 0;
         arrow_rotation = 0;
         flagsize= 0;
+        rotAmount = 0;
+        setscoopCone();
+        resetSpokes();
+       
       }
     }
 

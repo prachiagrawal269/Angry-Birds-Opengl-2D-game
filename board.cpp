@@ -5,11 +5,21 @@ class line
 public:
   float vert[6];
   float col[6];
+  float cenx;
+  float ceny;
+  float rotationAngle;
+  float translateX;
+  float translateY;
 
   void initLineVertices(float v[])
   {
     for(int i=0; i<6; i++)
       vert[i]=v[i];
+    cenx = 0;
+    ceny = 0;
+    rotationAngle = 0;
+    translateX = 0;
+    translateY = 0;
   }
 
   void initLineColors(float c1, float c2, float c3)
@@ -20,6 +30,32 @@ public:
       col[3*i + 1] = c2;
       col[3*i + 2] = c3;
     }
+  }
+
+  void initCentre(float x, float y)
+  {
+    cenx = x;
+    ceny = y;
+  }
+
+  void setRotationAngle(float theta)
+  {
+    rotationAngle = theta;
+  }
+
+  void lineTranslateX(float x)
+  {
+    translateX += x;
+  }
+
+  void lineTranslateY(float y)
+  {
+    translateY += y;
+  }
+  void resetTranslation()
+  {
+    translateX = 0;
+    translateY = 0;
   }
 
 };
@@ -596,12 +632,12 @@ VAO* createArrow ()
       vertex_buffer_data [4] = (sin(DEG2RAD(45)));
       vertex_buffer_data [5] = 0;
 
-      color_buffer_data [0] = 1;
-      color_buffer_data [1] = 1;
-      color_buffer_data [2] = 1;
-      color_buffer_data [3] = 1;
-      color_buffer_data [4] = 1;
-      color_buffer_data [5] = 1;
+      color_buffer_data [0] = 0;
+      color_buffer_data [1] = 0;
+      color_buffer_data [2] = 0;
+      color_buffer_data [3] = 0;
+      color_buffer_data [4] = 0;
+      color_buffer_data [5] = 0;
 
    return create3DObject(GL_LINES, 2, vertex_buffer_data, color_buffer_data, GL_LINE);
 
