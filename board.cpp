@@ -1,5 +1,30 @@
 #include "globals.h"
 
+class line
+{
+public:
+  float vert[6];
+  float col[6];
+
+  void initLineVertices(float v[])
+  {
+    for(int i=0; i<6; i++)
+      vert[i]=v[i];
+  }
+
+  void initLineColors(float c1, float c2, float c3)
+  {
+    for(int i=0; i<2; i++)
+    {
+      col[3*i] = c1;
+      col[3*i + 1] = c2;
+      col[3*i + 2] = c3;
+    }
+  }
+
+};
+
+
 class rectangle
 {
 public:
@@ -59,7 +84,9 @@ public:
 
     float cenx;
     float ceny;
+    float ratio;
     float rad;
+    float defaultRad;
     float bColor[4];
     float velocity;
     float vox;
@@ -83,6 +110,7 @@ public:
       cenx = x;
       ceny = y;
       rad = r;
+      defaultRad = r;
       translateX = 0;
       translateY = 0;
       basePositionX = cenx;
@@ -92,6 +120,12 @@ public:
       frictionFlag = 0;
       velocity = 0;
       angle =0;
+      ratio = 1;
+    }
+
+    void ratioAlter(float rat)
+    {
+      ratio = rat;
     }
 
     void initBallColor(float c1, float c2, float c3)
@@ -171,7 +205,7 @@ public:
        {
          vx = vox*res;
          vy = voy*res - vt*(1-res);
-         cout<<"update:: vx: "<<vx<<" "<<"vy: "<<vy<<endl;
+//         cout<<"update:: vx: "<<vx<<" "<<"vy: "<<vy<<endl;
        }
     }
 
@@ -418,25 +452,23 @@ public:
   }
 
 
-  VAO* createTriangle ()
+VAO* createTriangle (float arr[], float arrc[])
   {
   /* ONLY vertices between the bounds specified in glm::ortho will be visible on screen */
-
   /* Define vertex array as used in glBegin (GL_TRIANGLES) */
-  static const GLfloat vertex_buffer_data [] = {
-    0, 1,0, // vertex 0
-    -1,-1,0, // vertex 1
-    1,-1,0, // vertex 2
-  };
+  int i;
+  GLfloat* vertex_buffer_data = new GLfloat [3*3];
+  GLfloat* color_buffer_data = new GLfloat [3*3];
 
-  static const GLfloat color_buffer_data [] = {
-    1,0,0, // color 0
-    1,0,0, // color 1
-    1,0,0, // color 2
-  };
+    for(i=0; i<9; i++)
+    {
+      vertex_buffer_data[i] = arr[i];
+      color_buffer_data[i] = arrc[i];
+    }
+  
 
   // create3DObject creates and returns a handle to a VAO that can be used later
-  return create3DObject(GL_TRIANGLES, 3, vertex_buffer_data, color_buffer_data, GL_LINE);
+  return create3DObject(GL_TRIANGLES, 3, vertex_buffer_data, color_buffer_data, GL_FILL);
   }
 
 //VAO* createRectangle (float l, float b, float c1, float c2, float c3)
@@ -484,12 +516,13 @@ VAO* createRectangle (rectangle rect)
 }
 
 //VAO* createCircle (float rad, float c1, float c2, float c3)
-VAO* createCircle (ball Ball)
+VAO* createCircle (ball Ball, bool line)
 {
 
-  GLfloat* vertex_buffer_data = new GLfloat [3*360];
-  GLfloat* color_buffer_data = new GLfloat [3*360];
-  
+    GLfloat* vertex_buffer_data = new GLfloat [3*360];
+    GLfloat* color_buffer_data = new GLfloat [3*360];
+
+
    for(int i=0 ; i<360 ; i++) {
       vertex_buffer_data [3*i] = (Ball.rad * cos(DEG2RAD(i))) ;
       vertex_buffer_data [3*i + 1] = (Ball.rad * sin(DEG2RAD(i)));
@@ -501,7 +534,32 @@ VAO* createCircle (ball Ball)
 
    }
 
-   return create3DObject(GL_TRIANGLE_FAN, 360, vertex_buffer_data, color_buffer_data, GL_FILL);
+   if(!line)
+    return create3DObject(GL_TRIANGLE_FAN, 360, vertex_buffer_data, color_buffer_data, GL_FILL);
+   else
+    return create3DObject(GL_TRIANGLE_FAN, 360, vertex_buffer_data, color_buffer_data, GL_POINTS);
+
+}
+
+VAO* createSemiCircle (ball Ball)
+{
+
+    GLfloat* vertex_buffer_data = new GLfloat [3*180];
+    GLfloat* color_buffer_data = new GLfloat [3*180];
+
+
+   for(int i=0 ; i<180 ; i++) {
+      vertex_buffer_data [3*i] = (Ball.rad * cos(DEG2RAD(i))) ;
+      vertex_buffer_data [3*i + 1] = (Ball.rad * sin(DEG2RAD(i)));
+      vertex_buffer_data [3*i + 2] = 0;
+
+      color_buffer_data [3*i] = Ball.bColor[0];
+      color_buffer_data [3*i + 1] = Ball.bColor[1];
+      color_buffer_data [3*i + 2] = Ball.bColor[2];
+
+   }
+
+   return create3DObject(GL_TRIANGLE_FAN, 180, vertex_buffer_data, color_buffer_data, GL_FILL);
    
 }
 
@@ -549,6 +607,22 @@ VAO* createArrow ()
 
 }
 
+VAO* createLine (line Line)
+{
+
+  GLfloat* vertex_buffer_data = new GLfloat [3*4];
+  GLfloat* color_buffer_data = new GLfloat [3*4];
+
+  for(int i=0; i<6; i++)
+  {
+    vertex_buffer_data [i] = Line.vert[i];
+    color_buffer_data [i] = Line.col[i]; 
+  }
+
+   return create3DObject(GL_LINES, 2, vertex_buffer_data, color_buffer_data, GL_LINE);
+}
+
+
 VAO* createGround ()
 {
   GLfloat* vertex_buffer_data = new GLfloat [3*4];
@@ -581,6 +655,20 @@ VAO* createObstacle(rectangle rect, float e)
   Obstacles.push_back(make_pair(make_pair(rect.cenx, rect.ceny), make_pair(e, tmp)));
   return  createRectangle(rect);
 
+}
+
+void setTriangleVertices(float a, float b, float c, int i, float arr[])
+{
+  arr[3*i] = a;
+  arr[3*i+1]=b;
+  arr[3*i+2]=c;
+}
+
+void setTriangleColors(float a, float b, float c, int i, float arr[])
+{
+  arr[3*i] = a;
+  arr[3*i+1]=b;
+  arr[3*i+2]=c;
 }
 
 } ;

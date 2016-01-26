@@ -27,8 +27,9 @@ struct GLMatrices {
 
 GLuint programID;
 board myboard;
-ball scoop, movobs[3], melt, table;
-rectangle stand, obst[4], speedBar[11], background[13], tablestd, lifeBar[4];
+ball scoop, movobs[3], melt, table, cone, cartop, carWheel[2];
+rectangle obst[4], speedBar[11], background[13], tablestd, lifeBar[4], car, innercar;
+line lines[13];
 
 int lives = 3;
 float zoom = 1;
@@ -67,7 +68,7 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 	int InfoLogLength;
 
 	// Compile Vertex Shader
-	printf("Compiling shader : %s\n", vertex_file_path);
+//	printf("Compiling shader : %s\n", vertex_file_path);
 	char const * VertexSourcePointer = VertexShaderCode.c_str();
 	glShaderSource(VertexShaderID, 1, &VertexSourcePointer , NULL);
 	glCompileShader(VertexShaderID);
@@ -80,7 +81,7 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 	fprintf(stdout, "%s\n", &VertexShaderErrorMessage[0]);
 
 	// Compile Fragment Shader
-	printf("Compiling shader : %s\n", fragment_file_path);
+	//printf("Compiling shader : %s\n", fragment_file_path);
 	char const * FragmentSourcePointer = FragmentShaderCode.c_str();
 	glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , NULL);
 	glCompileShader(FragmentShaderID);
@@ -124,14 +125,6 @@ void quit(GLFWwindow *window)
     exit(EXIT_SUCCESS);
 }
 
-/* get angle between object's velocity and horizontal 
-double getTheta()
-{
-  theta = atan2(vy, vx);
-  theta = (theta*(180))/PI;
-  return theta;
-}*/
-
 /*get distance between two points (x1,y1) and (x2,y2)*/
 float getDIst(float x1, float y1, float x2, float y2)
 {
@@ -139,102 +132,6 @@ float getDIst(float x1, float y1, float x2, float y2)
   tmp = sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
   return tmp; 
 }
-
-/*get velocity of the ball*/
-/*void getballVelocity()
-{
-  ball_velocity = sqrt(vx*vx + vy*vy);
-}*/
-
-
-/*update com[onents of velocity upon collision
-void updateVelocityComponents(ball Ball, float newVelocity, double angle)
-{
-  Ball.velocity = newVelocity;
-  vx = ball_velocity*cos(DEG2RAD(angle));
-  vy = ball_velocity*sin(DEG2RAD(angle));
-  vox = vx;
-  voy = vy;
- // cout<<"angle: "<<angle<<" "<<"new velocity: "<<ball_velocity<<endl;
-  //cout<<"x: "<<vox<<" "<<"y: "<<voy<<endl;
-  Ball.setinitTime();
- // ball_Inittime = glfwGetTime();
-}
-*/
-
-/*set positions on change of ball's state*/
-/*void resetLastPosition()
-{
-  last_position_x = last_position_x + ball_shift_dist_x;
-  last_position_y = last_position_y + ball_shift_dist_y;
-  ball_shift_dist_x = 0;
-  ball_shift_dist_y = 0;
-}
-*/
-/*Update ball's position as per velocity
-void updateBallPosition()
-{
-  double res ;
-
-  double current_time, timeElapsed;
-  current_time = glfwGetTime();
-  timeElapsed = current_time - ball_Inittime;
-
-  if(ball_velocity==0)
-  {
-    resetLastPosition();
-  }
-  else
-  {
-    res = exp (-1*((gravity*timeElapsed)/vt)); 
-    ball_shift_dist_x = ((vox*vt)/gravity)*(1 - res);
-    ball_shift_dist_y = ((voy+vt)*(vt/gravity))*(1-res) - (vt*timeElapsed);
-    if(ball_shift_dist_y + last_position_y <=-10)
-    {
-      resetLastPosition();
-      friction_init_time =current_time;
-      friction = 1;
-      velocityFriction = vx;
-    }
-  }
-} */
-
-
-
-
-/*void checkMovableCollision(ball Tool, ball Target)
-{
-  float alpha, theta, v;
-  alpha = getAngle(Tool.basePositionX + Tool.translateX, Tool.basePositionY + Tool.translateY, 
-      Target.basePositionX + Target.translateX, Target.basePositionY + Target.translateY);
-
-  theta = Tool.getTheta();
-  theta = DEG2RAD(theta);
-
-  if(theta < PI/2 + alpha && theta > -1*(PI/2) + alpha)
-  {
-    
-
-  }
-
-}*/
-
-/*update velocity as per gravity and air friction
-void updateBallVelocity()
-{-
-  double res;
-  double current_time, timeElapsed;
-  current_time = glfwGetTime();
-  timeElapsed = current_time - ball_Inittime;
-
-  res = exp ((-1*gravity*timeElapsed)/vt);
-  if(ball_move_flag)
-  {
-    vx = vox*res;
-    vy = voy*res - vt*(1-res);
-  }
-} 
-*/
 
 /* Render the VBOs handled by VAO */
 void draw3DObject (board::VAO* vao)
@@ -271,7 +168,12 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
               {
                 canon_shift_dist_x -= 0.25; 
                 scoop.setbasePositionX(-0.25);
-                stand.rectTranslateX(-0.25);
+                car.rectTranslateX(-0.25);
+                innercar.rectTranslateX(-0.25);
+                cartop.setbasePositionX(-0.25);
+                carWheel[0].setbasePositionX(-0.25);
+                carWheel[1].setbasePositionX(-0.25);
+
              //   last_position_x = rectangle_cx + canon_shift_dist_x;
               }               
              break;
@@ -281,8 +183,11 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
               {
                 canon_shift_dist_x += 0.25;
                 scoop.setbasePositionX(0.25);
-                stand.rectTranslateX(0.25);
-
+                car.rectTranslateX(0.25);
+                innercar.rectTranslateX(0.25);
+                cartop.setbasePositionX(+0.25);
+                carWheel[0].setbasePositionX(+0.25);
+                carWheel[1].setbasePositionX(+0.25);
                // last_position_x = rectangle_cx + canon_shift_dist_x;
               }  
               break;
@@ -411,7 +316,7 @@ void reshapeWindow (GLFWwindow* window, int width, int height)
 }
 
 board::VAO *triangle, *rect , *circle, *arrow, *ground, *obstacle[10], *obsMovable, *speed_bar[11], *background_c[13],
- *icecreamMelt, *tabletop, *tablestand, *tableline, *life_bar[4];
+ *icecreamMelt, *tabletop, *tablestand, *tableline, *life_bar[4], *conetop, *conebase, *coneline[7], *carVao, *cartopVao, *carWheelVao[3], *innercarVao;
 
 void draw ()
 {
@@ -421,6 +326,22 @@ void draw ()
   glm::vec3 eye ( 5*cos(camera_rotation_angle*M_PI/180.0f), 0, 5*sin(camera_rotation_angle*M_PI/180.0f) );
   glm::vec3 target (0, 0, 0);
   glm::vec3 up (0, 1, 0);
+}
+
+
+void drawTriangle (int x, int y)
+{
+  Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); // Fixed camera for 2D (ortho) in XY plane
+  glm::mat4 VP = Matrices.projection * Matrices.view;
+  glm::mat4 MVP;  // MVP = Projection * View * Model
+
+  Matrices.model = glm::mat4(1.0f);
+
+  glm::mat4 translateRectangle = glm::translate (glm::vec3(x, y, 0));        // glTranslatef
+  Matrices.model *= (translateRectangle); 
+  MVP = VP * Matrices.model;
+  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
+  draw3DObject(conebase);
 }
 
 void drawRectangle (rectangle Rect, board::VAO *rectan)
@@ -437,38 +358,6 @@ void drawRectangle (rectangle Rect, board::VAO *rectan)
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
   draw3DObject(rectan);
 }
-
-/*void drawSquare (float cenx, float ceny, board::VAO *sqr)
- {
-  Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); // Fixed camera for 2D (ortho) in XY plane
-  glm::mat4 VP = Matrices.projection * Matrices.view;
-  glm::mat4 MVP;  // MVP = Projection * View * Model
-
-  Matrices.model = glm::mat4(1.0f);
-
-  glm::mat4 translateRectangle = glm::translate (glm::vec3(cenx, ceny, 0));        // glTranslatef
-  Matrices.model *= (translateRectangle); 
-  MVP = VP * Matrices.model;
-  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-  draw3DObject(sqr);
-}
-*/
-
-/* function to draw static obstacles on the board */
-/*void drawObstacle (rectangle Rect, board::VAO *obs)
- {
-  Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0));
-  glm::mat4 VP = Matrices.projection * Matrices.view;
-  glm::mat4 MVP; 
-
-  Matrices.model = glm::mat4(1.0f);
-
-  glm::mat4 translateRectangle = glm::translate (glm::vec3(Rect.cenx, Rect.ceny, 0));        
-  Matrices.model *= (translateRectangle); 
-  MVP = VP * Matrices.model;
-  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-  draw3DObject(obs);
-}*/
 
 /* ball object */
 void drawCircle (board::VAO *circl, ball Ball)
@@ -488,26 +377,6 @@ void drawCircle (board::VAO *circl, ball Ball)
 
 }
 
-/*void drawMovableObs (board::VAO *circl, ball Ball)
-{
-  
-  Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); 
-  glm::mat4 VP = Matrices.projection * Matrices.view;
-  glm::mat4 MVP; 
-
-  // forming circle 
-  Matrices.model = glm::mat4(1.0f);
-
-//  ball_cx_curr = last_position_x + ball_shift_dist_x;
-//  ball_cy_curr = last_position_y + ball_shift_dist_y;
-  glm::mat4 translateCircle = glm::translate (glm::vec3(Ball.basePositionX + Ball.translateX, Ball.basePositionY + Ball.translateY, 0));        // glTranslatef
-  Matrices.model *= (translateCircle); 
-  MVP = VP * Matrices.model;
-  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]); 
-  draw3DObject(circl);
-}
-*/
-
 void drawArrow (ball Ball)
 {
 
@@ -524,6 +393,24 @@ void drawArrow (ball Ball)
   MVP = VP * Matrices.model;
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
   draw3DObject(arrow);
+
+}
+
+void drawLine (board::VAO *lin, line Line)
+{
+
+  Matrices.view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0)); // Fixed camera for 2D (ortho) in XY plane
+  glm::mat4 VP = Matrices.projection * Matrices.view;
+  glm::mat4 MVP;
+
+  Matrices.model = glm::mat4(1.0f);
+
+  glm::mat4 translateArrow = glm::translate (glm::vec3(0, 0, 0));        
+  glm::mat4 arrowTransform = translateArrow ;
+  Matrices.model *= ( arrowTransform ); 
+  MVP = VP * Matrices.model;
+  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
+  draw3DObject(lin);
 
 }
 
@@ -587,10 +474,6 @@ void checkMovableCollision()
       movobs[0].resetPosition();
 
       scoop.setTheta();
-  //    cout<<"scoop angle: "<<scoop.angle<<endl;
-    //  cout<<"scoop vel before: "<<scoop.vx<<" "<<scoop.vy<<endl;
-
-
       scoop.velocity = abs(scoop.velocity*(sin(DEG2RAD(theta-alpha))));
       movobs[0].velocity = abs(scoop.velocity*(cos(DEG2RAD(theta-alpha))));
 
@@ -598,13 +481,7 @@ void checkMovableCollision()
       scoop.updateVelocityComponents(scoop.velocity, (180*(PI/2 + alpha))/PI);
       movobs[0].updateVelocityComponents(movobs[0].velocity, (180*alpha)/PI);
 
-  //    cout<<"scoop vel: "<<scoop.vx<<" "<<scoop.vy<<endl;
-    // cout<<"mov vel: "<<movobs[0].vx<< " "<<movobs[0].vy<<endl;
-
-    //  scoop.angle = (180*(PI/2 + alpha))/PI;
-     // movobs[0].angle = (180*alpha)/PI;
-
-      // check for friction for both scoop and movobs[0]
+  
       if(!scoop.checkFriction())
       {
         scoop.updateBallPosition();
@@ -652,13 +529,6 @@ void checkCollision()
       scoop.resetPosition();
    //   cout<<"vx: "<<scoop.vx<< " "<<"vy: "<<scoop.vy<<endl;
       scoop.angle = scoop.getTheta();
-//      cout<<"angle: "<<scoop.angle<<endl;
-      //if(vx>0)
-    /*  if(scoop.vx!=0)
-        scoop.angle = 180 + scoop.angle;
-//      else if(vx==0)
-      else
-        scoop.angle = -1*(scoop.angle); */
 
       theta = scoop.getTheta();
       theta = DEG2RAD(theta);
@@ -668,10 +538,7 @@ void checkCollision()
       cout<<(180*theta)/PI<<" "<<(180*alpha)/PI<<endl;
      // cout<<"sv: "<<scoop.velocity<<endl;
       vel = getDIst(scoop.velocity*sin(theta-alpha), (e*scoop.velocity)*cos(theta-alpha), 0, 0);
-   //   cout<<"comp1: "<<scoop.velocity*sin(theta-alpha)<<" "<<(scoop.velocity)*cos(theta-alpha)<<endl;
-
-    //  cout<<"comp2: "<<scoop.velocity*sin(theta-alpha)<<" "<<(e*scoop.velocity)*cos(theta-alpha)<<endl;
-     // cout<<"snv vel: "<<vel<<endl;
+   
       angleDash = atan2(e, tan(theta-alpha));
 
       scoop.updateVelocityComponents(vel, angleDash);
@@ -686,11 +553,7 @@ void checkCollision()
       else 
         scoop.translateY -= 0.2;
       scoop.resetPosition();
-   //   cout<<scoop.basePositionX<<" "<<scoop.basePositionY<<endl;
-   //   drawCircle(circle, scoop);
-
-       // cout<<"translate "<<scoop.translateX<<" "<<scoop.translateY<<endl;
-      
+ 
     }
   }
 }
@@ -722,6 +585,32 @@ void checkWallCollision()
       cout<<scoop.getCurrCoordinatesX()<<" "<<scoop.getCurrCoordinatesY()<<endl;
     }
 } 
+
+bool checkTarget()
+{
+  if(scoop.getCurrCoordinatesX()>=8 && scoop.getCurrCoordinatesX()<=10)
+  {
+    if(scoop.getCurrCoordinatesY()>=-6.5 && scoop.getCurrCoordinatesY()<=-5.5)
+    {
+      cout<<scoop.getCurrCoordinatesX()<<" "<<scoop.getCurrCoordinatesY()<<endl;
+      cout<<"Target hit\n";
+      score += (scoop.rad)/(scoop.defaultRad)*10;
+      cout<<"score: "<<score<<endl;
+      scoop.moveFlag = 0;
+      scoop.vx=0;
+      scoop.vy=0;
+      scoop.frictionFlag=0;
+      scoop.resetPosition();
+      scoop.setballVelocity();
+      return 1;
+    }
+    else
+      return 0;
+  }
+  else
+    return 0;
+
+}
 
 /*creating background for window*/
 void CreateGradientBackground()
@@ -815,6 +704,7 @@ void DrawLifeBar ()
 } 
 
 
+
 GLFWwindow* initGLFW (int width, int height)
 {
     int wid, hei;
@@ -858,41 +748,114 @@ GLFWwindow* initGLFW (int width, int height)
 
     return window;
 }
+void initLineCone()
+{
+ /* slant lines over the target cone*/
+  for(int i=0; i<7; i++)
+    lines[i].initLineColors(0, 0, 0);
+
+  float lineVer[6]  = {7.875, -7, 0, 8.7, -6, 0};
+  lines[0].initLineVertices(lineVer);
+
+  float lineVer1[6] = {8.250, -8, 0, 9.9, -6, 0};
+  lines[1].initLineVertices(lineVer1);
+
+  float lineVer2[6] = {8.675, -9, 0, 9.85, -7.55, 0};
+  lines[2].initLineVertices(lineVer2);
+
+  float lineVer3[6] = {8.7, -6, 0, 9.85, -7.55, 0};
+  lines[3].initLineVertices(lineVer3);
+  
+  float lineVer4[6] = {7.67, -6, 0, 9.55, -8.5, 0};
+  lines[4].initLineVertices(lineVer4);
+
+  float lineVer5[6] = {8.25, -8, 0, 9.225, -9.4, 0};
+  lines[5].initLineVertices(lineVer5);
+
+  float lineVer6[6] = {10.3, -6.5, 0, 9.9, -6, 0};
+  lines[6].initLineVertices(lineVer6);
+
+
+
+  for(int i=0; i<7; i++)
+    coneline[i] = myboard.createLine(lines[i]);
+
+}
+
+void initCar()
+{
+  car.initRect(4, 3, -8, -7.75, 5);
+  car.initRectColor(1, 0.4, 0.7);
+  car.resetTranslateRect();
+
+  carVao = myboard.createRectangle(car);
+
+  innercar.initRect(3, 2, -8, -7.75, 3.5);
+  innercar.initRectColor(1, 1, 0.8);
+  innercar.resetTranslateRect();
+
+  innercarVao = myboard.createRectangle(innercar);
+
+  /*drawing wheels of the icecream car*/
+  carWheel[0].initBallCentre( -7, -9.3, 0.7, 1);
+  carWheel[0].initBallColor(0.15, 0.15, 0.15);
+  carWheel[0].initVelocity(0, 0);
+
+  carWheelVao[0] = myboard.createCircle(carWheel[0], 1);
+
+  carWheel[1].initBallCentre( -9, -9.3, 0.7, 1);
+  carWheel[1].initBallColor(0.15, 0.15, 0.15);
+  carWheel[1].initVelocity(0, 0);
+
+  carWheelVao[1] = myboard.createCircle(carWheel[1], 1);
+
+  /* cartop semicircle */
+  cartop.initBallCentre( -8, -6.25, 2.25, 1);
+  cartop.initBallColor(1, 0.8, 0);
+  cartop.initVelocity(0, 0);
+  cartop.ratioAlter(0.5);
+
+  cartopVao = myboard.createSemiCircle(cartop);
+
+
+}
 
 /* Add all the models to be created here */
 void initGL (GLFWwindow* window, int width, int height)
 {
     /* Objects should be created before any other gl function and shaders */
   // ball_velocity = 5;
-  stand.initRect(2, 2, -9, -9, 1.44);
+  float ver[10], col[10];
+  initCar();
+ /* stand.initRect(2, 2, -9, -9, 1.44);
   stand.initRectColor(1, 0, 0);
   stand.resetTranslateRect();
-	rect = myboard.createRectangle (stand);
+	rect = myboard.createRectangle (stand); */
   Obstacles.push_back(make_pair(make_pair(-9, -9), make_pair(0.5, 1.44)));
-
- // ball_radius = 0.5;
- // ball_cx = -9;
- // ball_cy = -7.5;
 
   scoop.initBallCentre(-9, -7.5, 0.5, 1);
   scoop.initBallColor(0, 0, 1);
   scoop.initVelocity(5, 45);
   
  // creating movable obstacles
-  movobs[0].initBallCentre( 0, -9, 1, 1);
+  movobs[0].initBallCentre( -3, -9, 1, 1);
   movobs[0].initBallColor(1, 0.5, 0);
   movobs[0].initVelocity(0, 0);
 
   //circle = myboard.createCircle (scoop.rad, scoop.bColor[0], scoop.bColor[1], scoop.bColor[2]);
-  circle = myboard.createCircle (scoop);
-  obsMovable = myboard.createCircle(movobs[0]);
+  circle = myboard.createCircle (scoop, 1);
+  obsMovable = myboard.createCircle(movobs[0], 1);
 
   /*oval tabletop*/
   table.initBallCentre(2.5, -5.7 , 0.5, 0);
   table.initBallColor(1, 0.6, 0.3);
 
+  /*cone top*/
+  cone.initBallCentre(9, -5.8 , 0.5, 1);
+  cone.initBallColor(0.8, 0.5, 0);
+
   tablestd.initRect(0.3, 4.3, 2.5, -8, 4.75);
-  tablestd.initRectColor(0.9, 0.3, 0.2);
+  tablestd.initRectColor(0.6, 0.6, 0);
   tablestd.resetTranslateRect();
 
   tablestand = myboard.createRectangle (tablestd);
@@ -900,34 +863,35 @@ void initGL (GLFWwindow* window, int width, int height)
   arrow = myboard.createArrow ();
   ground = myboard.createGround ();
   tabletop = myboard.createOval(2, 0.25, table);
+  conetop = myboard.createOval(1.5, 0.15, cone);
 
- // obsMovable = myboard.createCircle (1, 1, 0.75, 0);
+  myboard.setTriangleVertices(1.5, 2, 0, 0, ver);
+  myboard.setTriangleVertices(-1.5, 2, 0, 1, ver);
+  myboard.setTriangleVertices(0, -2, 0, 2, ver);
+
+  myboard.setTriangleColors( 0.8, 0.5, 0, 0, col);
+  myboard.setTriangleColors( 0.8, 0.5, 0, 1, col);
+  myboard.setTriangleColors( 0.8, 0.5, 0, 2, col);
+
+  initLineCone();
+
+ // cout<<"ver: "<<ver[0]<<endl;
+  conebase = myboard.createTriangle(ver, col);
 
   CreateGradientBackground();
   CreateSpeedBar();
   CreateLifeBar();
-  /*speed bar
-  for(int i=1; i<11; i++)
-  {
-    speed_bar[i-1] = myboard.createRectangle(1, 1.5, float(i)/10, 1-(float(i)/10), 0);
-  } */
-
-  /*creating obstacles on the board*/
-  //for(int i=0; i<3; i++)
-  //{
-
 
     // obstacles creation
-    obst[1].initRect(1, 4, -6.5, -8, 0.5);
+    obst[1].initRect(3, 4, 9, -8, 0.5);
     obst[1].resetTranslateRect();
-    obst[1].initRectColor(1, 0.5, 0.5);
+ //   obst[1].initRectColor(1, 0.5, 0.5);
 
     obst[2].initRect(4, 5, 2.5, -8.0, 0.5);
     obst[2].resetTranslateRect();
     obst[2].initRectColor(0.5, 1, 0.5);
 
     obstacle[1] = myboard.createObstacle( obst[1], 0.5);
-
     obstacle[2] = myboard.createObstacle( obst[2], 0.5);
 	
 
@@ -940,23 +904,7 @@ void initGL (GLFWwindow* window, int width, int height)
     // Background color of the scene
 	glClearColor (1.0f, 1.0f, 1.0f, 1.0f);
 
-    cout << "VENDOR: " << glGetString(GL_VENDOR) << endl;
-    cout << "RENDERER: " << glGetString(GL_RENDERER) << endl;
-    cout << "VERSION: " << glGetString(GL_VERSION) << endl;
-    cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 }
-
-/* initializing friction */
-/*void initFriction()
-{
-  double timeElapsed;
-  timeElapsed = glfwGetTime() - friction_init_time;
-
-  vx = velocityFriction - (frictionCoefficient*(gravity*timeElapsed));
-
-  if(vx>threshold_velocity)
-    ball_shift_dist_x = velocityFriction*timeElapsed - ((timeElapsed*timeElapsed)*(gravity*frictionCoefficient))/2; 
-} */
  
 int main (int argc, char** argv)
 {
@@ -981,11 +929,22 @@ int main (int argc, char** argv)
         draw();
         drawGradientBackground();
         drawGround();
-        drawRectangle(stand, rect);
+        drawRectangle(car, carVao);
+        drawRectangle(innercar, innercarVao);
+        drawCircle(carWheelVao[0], carWheel[0] );
+        drawCircle(carWheelVao[1], carWheel[1]);
+        drawCircle(cartopVao, cartop);
 
+        /*draw target*/
+        // oval and triangle
+        drawCircle(conetop, cone);
+        drawTriangle(9, -8);
+
+        for(int i=0; i<7; i++)
+          drawLine(coneline[i], lines[i]);
 
         /*ensure that there is still life*/
-        if(lives>0 && scoop.checkLife()==0)
+        if(lives>0 && scoop.checkLife()==0 && checkTarget()!=1)
         {
           if(scoop.moveFlag)
           scoop.updateBallVelocity();
@@ -997,26 +956,23 @@ int main (int argc, char** argv)
 
         /* draw obstacles on the board */
 
-     /*   for(int i=1 ; i<Obstacles.size()-1; i++)
+        /*for(int i=1 ; i<Obstacles.size()-1; i++)
         {
          // p = Obstacles[i].first;         
           drawRectangle(obst[i], obstacle[i]);
         } */
+
+
         /* drawing the round table obstacle*/
           // oval, rectangle, lines
         drawCircle(tabletop, table);
         drawRectangle(tablestd, tablestand);
 
-        /*displaying speed bar
-        for(int i=0; i< int(ball_velocity); i++)
-        {
-          drawSquare(-10, 0.7*(i+1), speed_bar[i]);
-        } */
-
         DrawSpeedBar(scoop.velocity);
         DrawLifeBar();
 
-        if(scoop.basePositionY + scoop.translateY>= 4*lives-4 && flagsize==0)
+        /*ice cream melt movement code*/
+        if(scoop.basePositionY + scoop.translateY>= 4*lives-4 && flagsize==0 )
         {
           scoop.rad = scoop.rad/1.25;
 
@@ -1026,7 +982,7 @@ int main (int argc, char** argv)
           melt.setinitTime();
           melt.moveFlag=1;
           icecreamMelt = myboard.createOval(scoop.rad/3, scoop.rad/2, melt);
-          circle = myboard.createCircle (scoop);
+          circle = myboard.createCircle (scoop, 1);
           flagsize = 1;
 
         }
@@ -1044,10 +1000,7 @@ int main (int argc, char** argv)
             melt.vy=0;
             melt.moveFlag=0;
           }
-     //     melt.updateBallVelocity();
-     //     melt.updateVelocityComponents();
-      //    melt.initFriction();
-         // cout<<"melt: "<<melt.getCurrCoordinatesY()<<endl;
+  
         }
 
         drawCircle(circle, scoop);
@@ -1057,9 +1010,6 @@ int main (int argc, char** argv)
           drawArrow(scoop);
 
         glfwSwapBuffers(window);
-
-        // Poll for Keyboard and mouse events
-      
 
         // Control based on time (Time based transformation like 5 degrees rotation every 0.5s)
         current_time = glfwGetTime(); // Time in seconds
@@ -1074,51 +1024,38 @@ int main (int argc, char** argv)
         if(scoop.moveFlag)
           checkMovableCollision();
 
-      //  if(last_position_x + ball_shift_dist_x<12)
-       //   drawCircle(circle);  
-
          scoop.checkFriction();
 
 
           /* move the ball */
            if(scoop.moveFlag==1 && scoop.frictionFlag ==0 )
-            {
-//            cout<<"bal movement\n";
-              scoop.updateBallPosition();
-            }
-          /* applying ground friction on the ball*/ 
-//           cout<<"ball: "<<scoop.frictionFlag<<" "<<scoop.vx<<endl;
-
+                scoop.updateBallPosition();
+            
            if(scoop.frictionFlag==1 && abs(scoop.vx)>0.05)
-           {
-          //    cout<<"ball friction\n";
-              scoop.initFriction();
-            //  cout<<scoop.vx<<endl;
-           }
-
- //          cout<<"movobs: "<<movobs[0].frictionFlag<<" "<<movobs[0].vx<<endl;
+               scoop.initFriction();
+        
            if(movobs[0].frictionFlag==1 && abs(movobs[0].vx)>0.05)
-           {
-             // cout<<"movable obstacle friction\n";
-              movobs[0].initFriction();
-             // cout<<movobs[0].vx<<endl;
-           }
-
+               movobs[0].initFriction();
+           
             last_update_time = current_time;
         }
       }
-      else if(lives>0)
+      else if(lives>0 || checkTarget()==1)
       {
         cout<<"new life\n";
         lives -= 1;
         scoop.initBallCentre(-9, -7.5, 0.5, 1);
         scoop.initBallColor(0, 0, 1);
         scoop.initVelocity(5, 45);
-        circle = myboard.createCircle (scoop);
+        circle = myboard.createCircle (scoop, 1);
         CreateGradientBackground();
-        stand.resetTranslateRect();
+        car.resetTranslateRect();
+        innercar.resetTranslateRect();
         scoop.resetBall();
         scoop.initVelocity(5, 45);
+        cartop.resetBall();
+        carWheel[0].resetBall();
+        carWheel[1].resetBall();
         movobs[0].resetBall();
         movobs[0].initBallCentre( 0, -9, 1, 1);
         movobs[0].initBallColor(1, 0.5, 0);

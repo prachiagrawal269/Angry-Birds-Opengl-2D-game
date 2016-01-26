@@ -28,6 +28,7 @@ float rectangle_rotation = 0;
 float triangle_rotation = 0;
 float arrow_rotation = 0;
 float turn = 0;
+float score =0;
 //double theta = 45;
 
 /*float ball_radius = 0.5;
