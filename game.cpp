@@ -7,16 +7,11 @@
 #include <GLFW/glfw3.h>
 #include "globals.h"
 #include "board.cpp"
-//#include "statistics.cpp"
-
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 using namespace std;
-
-//float last_position_x = rectangle_cx;
-//float last_position_y = rectangle_cy+1+0.5;
 
 struct GLMatrices {
 	glm::mat4 projection;
@@ -637,7 +632,7 @@ void initCar()
 
   carWheelVao[1] = myboard.createCircle(carWheel[1], 1);
 
-  /* cartop semicircle */
+  /* carTop semicircle */
   cartop.initBallCentre( -8, -6.25, 2.25, 1);
   cartop.initBallColor(1, 0.8, 0);
   cartop.initVelocity(0, 0);
@@ -646,7 +641,6 @@ void initCar()
   cartopVao = myboard.createSemiCircle(cartop);
 
   /*spokes of wheels*/
-
   float lineVer[6]  = {0.4, 0.4, 0, -0.4, -0.4, 0};
   wheel[0].initLineVertices(lineVer);
 
@@ -751,12 +745,14 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
             break;
 
             case GLFW_KEY_UP:
-              zoom -= 0.1;
+              if(zoom<1.5)
+                zoom -= 0.1;
             //  cout<<"up\n";
               break;
 
             case GLFW_KEY_DOWN:
-              zoom += 0.1;
+              if(zoom>0.5)
+                zoom += 0.1;
               break;
 
             case GLFW_KEY_F:
@@ -836,11 +832,13 @@ void keyboardChar (GLFWwindow* window, unsigned int key)
 void mouseButton (GLFWwindow* window, int button, int action, int mods)
 {
     switch (button) {
-/*        case GLFW_MOUSE_BUTTON_LEFT:
-            if (action == GLFW_RELEASE)
-                triangle_rot_dir *= -1;
+  /*      case GLFW_MOUSE_BUTTON_LEFT:
+            if (action == GLFW_PRESS)
+            {
+              scoop.initBallColor(1, 0.2, 0.2);
+            }
             break; 
-        case GLFW_MOUSE_BUTTON_RIGHT:
+       case GLFW_MOUSE_BUTTON_RIGHT:
             if (action == GLFW_PRESS) {
                 glfwGetMousePos(&mouseX, &mouseY);
                 if(mouseX - lastmouseX > 0)
@@ -850,8 +848,8 @@ void mouseButton (GLFWwindow* window, int button, int action, int mods)
                   pan += 1;
                 }
             }
-            break;
-        default:
+            break; 
+            default:
             break; */
     }
 }
@@ -926,10 +924,7 @@ void initGL (GLFWwindow* window, int width, int height)
 
   initCar();
   setscoopCone();
- /* stand.initRect(2, 2, -9, -9, 1.44);
-  stand.initRectColor(1, 0, 0);
-  stand.resetTranslateRect();
-	rect = myboard.createRectangle (stand); */
+ 
   Obstacles.push_back(make_pair(make_pair(-9, -9), make_pair(0.5, 1.44)));
 
   scoop.initBallCentre(-8, -4, 0.5, 1);
@@ -964,6 +959,7 @@ void initGL (GLFWwindow* window, int width, int height)
   tabletop = myboard.createOval(2, 0.25, table);
   conetop = myboard.createOval(1.5, 0.15, cone);
 
+  /*vertices for target conebase*/
   myboard.setTriangleVertices(1.5, 2, 0, 0, ver);
   myboard.setTriangleVertices(-1.5, 2, 0, 1, ver);
   myboard.setTriangleVertices(0, -2, 0, 2, ver);
@@ -973,8 +969,6 @@ void initGL (GLFWwindow* window, int width, int height)
   myboard.setTriangleColors( 0.8, 0.5, 0, 2, col);
 
   initLineCone();
-
- // cout<<"ver: "<<ver[0]<<endl;
   conebase = myboard.createTriangle(ver, col);
 
   CreateGradientBackground();
@@ -984,7 +978,6 @@ void initGL (GLFWwindow* window, int width, int height)
     // obstacles creation
     obst[1].initRect(3, 4, 9, -8, 0.5);
     obst[1].resetTranslateRect();
- //   obst[1].initRectColor(1, 0.5, 0.5);
 
     obst[2].initRect(4, 5, 2.5, -8.0, 0.5);
     obst[2].resetTranslateRect();
@@ -992,7 +985,6 @@ void initGL (GLFWwindow* window, int width, int height)
 
     obstacle[1] = myboard.createObstacle( obst[1], 0.5);
     obstacle[2] = myboard.createObstacle( obst[2], 0.5);
-	
 
     programID = LoadShaders( "game.vert", "game.frag" );
 	Matrices.MatrixID = glGetUniformLocation(programID, "MVP");
@@ -1097,10 +1089,9 @@ int main (int argc, char** argv)
           drawCircle(icecreamMelt, melt);
           if(melt.moveFlag)
             melt.updateBallPosition();
-          /*melt part reaches ground*/
+
           if(abs(melt.getCurrCoordinatesY()) + melt.rad>=10)
           {
-            cout<<"melt on ground\n";
             melt.vx=0;
             melt.vy=0;
             melt.moveFlag=0;

@@ -112,7 +112,7 @@ public:
     }
 
 };
-//rectangle rect;
+
 
 class ball
 {
@@ -130,8 +130,6 @@ public:
     float vx;
     float vy;
     float angle;
-    float ax;
-    float ay;
     float basePositionX;
     float basePositionY;
     float translateX;
@@ -179,8 +177,7 @@ public:
       voy = v*sin(DEG2RAD(a));
       vx = vox;
       vy = voy;
-     // ax = aax;
-      //ay = aay;
+   
     }
 
     void setinitTime()
